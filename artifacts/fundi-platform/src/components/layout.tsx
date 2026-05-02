@@ -1,17 +1,80 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShieldCheck, Menu, X, ChevronRight } from "lucide-react";
+import { ShieldCheck, Menu, X, ChevronRight, LogIn, LogOut, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Show, useUser, useClerk } from "@clerk/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const NAV_LINKS = [
   { href: "/contractors", label: "Find a Pro" },
   { href: "/jobs", label: "Browse Jobs" },
   { href: "/estimate", label: "Estimator" },
 ];
-const DASHBOARD_LINKS = [
-  { href: "/dashboard/homeowner", label: "Homeowner Dashboard" },
-  { href: "/dashboard/contractor", label: "Pro Dashboard" },
-];
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function UserMenu() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
+  const nameInitials = user
+    ? ((user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")).toUpperCase()
+    : "";
+  const emailInitial = user?.emailAddresses[0]?.emailAddress?.[0]?.toUpperCase() ?? "";
+  const initials = nameInitials || emailInitial || "U";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user?.imageUrl} />
+            <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel className="font-normal">
+          <p className="font-medium text-sm truncate">{user?.fullName ?? "My Account"}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {user?.emailAddresses[0]?.emailAddress}
+          </p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/homeowner" className="cursor-pointer flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Homeowner Dashboard
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/contractor" className="cursor-pointer flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Pro Dashboard
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 cursor-pointer flex items-center gap-2"
+          onClick={() => signOut({ redirectUrl: `${basePath}/` })}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function Layout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -50,23 +113,9 @@ export function Layout({ children }: { children: ReactNode }) {
                 {label}
               </Link>
             ))}
-            <div className="h-5 w-px bg-border mx-2" />
-            {DASHBOARD_LINKS.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(href)
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
           </nav>
 
-          {/* Desktop CTAs */}
+          {/* Desktop CTAs — auth-aware */}
           <div className="hidden md:flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/apply">Apply as Pro</Link>
@@ -74,6 +123,18 @@ export function Layout({ children }: { children: ReactNode }) {
             <Button size="sm" asChild>
               <Link href="/jobs/new">Post a Job</Link>
             </Button>
+            <div className="h-5 w-px bg-border mx-1" />
+            <Show when="signed-out">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/sign-in">
+                  <LogIn className="h-4 w-4 mr-1.5" />
+                  Sign In
+                </Link>
+              </Button>
+            </Show>
+            <Show when="signed-in">
+              <UserMenu />
+            </Show>
           </div>
 
           {/* Mobile hamburger */}
@@ -93,7 +154,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="md:hidden border-t bg-background">
             <nav className="container mx-auto px-4 py-4 flex flex-col gap-1">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1 mt-1">
-                Homeowners
+                Explore
               </p>
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
@@ -109,22 +170,31 @@ export function Layout({ children }: { children: ReactNode }) {
                 </Link>
               ))}
 
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1 mt-3">
-                Dashboards
-              </p>
-              {DASHBOARD_LINKS.map(({ href, label }) => (
+              <Show when="signed-in">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1 mt-3">
+                  Dashboards
+                </p>
                 <Link
-                  key={href}
-                  href={href}
+                  href="/dashboard/homeowner"
                   onClick={close}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(href) ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                    isActive("/dashboard/homeowner") ? "bg-primary/10 text-primary" : "hover:bg-muted"
                   }`}
                 >
-                  {label}
+                  Homeowner Dashboard
                   <ChevronRight className="h-4 w-4 opacity-50" />
                 </Link>
-              ))}
+                <Link
+                  href="/dashboard/contractor"
+                  onClick={close}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive("/dashboard/contractor") ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                  }`}
+                >
+                  Pro Dashboard
+                  <ChevronRight className="h-4 w-4 opacity-50" />
+                </Link>
+              </Show>
 
               <div className="h-px bg-border my-3" />
               <div className="flex flex-col gap-2">
@@ -134,6 +204,17 @@ export function Layout({ children }: { children: ReactNode }) {
                 <Button asChild onClick={close}>
                   <Link href="/jobs/new">Post a Job</Link>
                 </Button>
+                <Show when="signed-out">
+                  <Button variant="ghost" asChild onClick={close}>
+                    <Link href="/sign-in">
+                      <LogIn className="h-4 w-4 mr-1.5" />
+                      Sign In
+                    </Link>
+                  </Button>
+                </Show>
+                <Show when="signed-in">
+                  <SignOutMobileButton onClose={close} />
+                </Show>
               </div>
             </nav>
           </div>
@@ -188,5 +269,19 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </footer>
     </div>
+  );
+}
+
+function SignOutMobileButton({ onClose }: { onClose: () => void }) {
+  const { signOut } = useClerk();
+  return (
+    <Button
+      variant="ghost"
+      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+      onClick={() => { onClose(); signOut({ redirectUrl: `${basePath}/` }); }}
+    >
+      <LogOut className="h-4 w-4 mr-1.5" />
+      Sign Out
+    </Button>
   );
 }

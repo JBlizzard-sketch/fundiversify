@@ -98,21 +98,29 @@ Regenerates `lib/api-client-react/src/generated/api.ts` and `lib/api-zod/src/gen
 - `--background: 40 20% 98%` — warm off-white (Nairobi warmth)
 - `--accent: 28 80% 52%` — orange-amber (CTAs, highlights)
 
-## GitHub Push
+## GitHub Sync
 
 Repo: https://github.com/JBlizzard-sketch/fundiversify
 
-Push script at `scripts/src/github-push.ts` — uses GitHub Git Trees API (no git CLI required).
+Push script at `scripts/src/github-push.ts` — uses GitHub Git Trees API with inline content (no git CLI, no blob pre-upload needed, works on empty repos).
 
 ```bash
 pnpm --filter @workspace/scripts run push
 ```
 
-Important: GitHub's secondary rate limit allows ~180 blob uploads before throttling. The script includes 250ms delays between uploads. Total push time for ~270 files: ~70 seconds. If rate limited (403), the retry waits 15-30s and retries twice per file.
+How it works:
+1. If the repo is completely empty, seeds it via the Contents API (the only endpoint that accepts writes on zero-commit repos)
+2. Collects all workspace files (skips node_modules, dist, .git, lock files, binaries > 2MB)
+3. Builds a full Git tree with inline file content in a single API call (no per-file blob uploads)
+4. Creates a commit and force-pushes the `main` ref
+
+Run this command any time you want to sync local changes to GitHub.
 
 ## Recent Improvements
 
 - Home page: functional search → navigates to `/contractors?search=...&location=...`, location chips, "How it Works" section, trust signals grid, contractor CTA
 - Contractors page: reads initial state from URL search params (compatible with home page search redirect)
 - Layout: functional mobile navigation menu with hamburger toggle, active nav highlighting, improved footer
+- Post-job page: pre-fills `trade` and `location` from URL params (supports "Book This Pro" deep-link flow)
+- 404 page: improved UX with clear navigation back to home/contractors
 - README.md: comprehensive documentation of all endpoints, schema, roadmap
