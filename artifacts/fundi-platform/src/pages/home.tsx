@@ -9,8 +9,8 @@ import { OnboardingModal } from "@/components/onboarding-modal";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { StatsBanner } from "@/components/stats-bar";
 import { ReviewMarquee } from "@/components/review-marquee";
+import { SearchAutocomplete } from "@/components/search-autocomplete";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useGetContractorStats, useListTrades } from "@workspace/api-client-react";
 
@@ -96,27 +96,23 @@ export default function Home() {
 
             {/* Search bar */}
             <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 p-3 bg-background rounded-2xl shadow-lg border">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Plumber, Electrician, Painter…"
-                  className="pl-10 h-11 text-base border-0 focus-visible:ring-0 bg-transparent"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
-              </div>
+              <SearchAutocomplete
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onKeyDown={handleKeyDown}
+                suggestions={[...Object.keys(TRADE_ICONS), ...(trades.map((t: { name: string }) => t.name))]}
+                placeholder="Plumber, Electrician, Painter…"
+                icon={<Search className="h-5 w-5" />}
+              />
               <div className="hidden sm:block h-11 w-px bg-border self-center" />
-              <div className="flex-1 relative">
-                <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Westlands, Karen, Kasarani…"
-                  className="pl-10 h-11 text-base border-0 focus-visible:ring-0 bg-transparent"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
-              </div>
+              <SearchAutocomplete
+                value={location}
+                onChange={setLocation}
+                onKeyDown={handleKeyDown}
+                suggestions={LOCATIONS}
+                placeholder="Westlands, Karen, Kasarani…"
+                icon={<MapPin className="h-5 w-5" />}
+              />
               <Button size="lg" className="h-11 px-8" onClick={handleSearch}>
                 Search
               </Button>

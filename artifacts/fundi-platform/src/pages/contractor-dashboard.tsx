@@ -4,6 +4,7 @@ import { Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, Im
 import { ReferralCard } from "@/components/referral-card";
 import { JobAlertWidget } from "@/components/job-alert-widget";
 import { AvailabilityWidget } from "@/components/availability-widget";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +101,21 @@ export default function ContractorDashboard() {
           <Button asChild><Link href={`/contractors/${CONTRACTOR_ID}`}>View Profile</Link></Button>
         </div>
       </div>
+
+      {/* Onboarding checklist — hidden when 100% complete */}
+      <OnboardingChecklist
+        items={[
+          { label: "Profile photo", done: !!contractor?.photoUrl, hint: "A clear headshot builds trust", href: `/contractors/${CONTRACTOR_ID}` },
+          { label: "Bio written", done: !!(contractor?.bio && contractor.bio.length > 20), hint: "Tell homeowners what you specialise in", href: `/contractors/${CONTRACTOR_ID}` },
+          { label: "Phone number", done: !!contractor?.phone, hint: "So clients can reach you quickly" },
+          { label: "Specialisations added", done: !!(contractor?.specializations && contractor.specializations.length > 0), hint: "e.g. Bathroom tiling, roof repairs" },
+          { label: "Years of experience", done: !!(contractor?.yearsExperience && contractor.yearsExperience > 0), hint: "Homeowners prefer experienced pros" },
+          { label: "ID document uploaded", done: !!contractor?.idDocUrl, hint: "Required for Verified badge" },
+          { label: "Business permit uploaded", done: !!contractor?.businessPermitUrl, hint: "Required for Verified badge" },
+        ]}
+        completedCount={completedCount}
+        percent={completenessPercent}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

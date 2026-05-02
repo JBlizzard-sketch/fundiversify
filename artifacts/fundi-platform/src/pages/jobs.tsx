@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { MapPin, Clock, Briefcase, ChevronRight, Plus, Zap, Droplets, Paintbrush, Hammer, Layers, HardHat, Wind, Flame, Wrench, ArrowUpDown, Users, TrendingDown, TrendingUp } from "lucide-react";
+import { MapPin, Clock, Briefcase, ChevronRight, Plus, Zap, Droplets, Paintbrush, Hammer, Layers, HardHat, Wind, Flame, Wrench, ArrowUpDown, Users, TrendingDown, TrendingUp, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListJobs } from "@workspace/api-client-react";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useSavedJobs } from "@/hooks/use-saved-jobs";
 
 const TRADES = ["All Trades", "Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
 const LOCATIONS = ["All Locations", "Westlands", "Kilimani", "Karen", "Kasarani", "Parklands", "Lavington", "Eastleigh", "South B", "Langata"];
@@ -58,6 +59,7 @@ const BUDGET_PRESETS = [
 
 export default function JobsPage() {
   usePageMeta("Browse Jobs", "Browse open home service jobs in Nairobi. Submit quotes and win work as a verified fundi.");
+  const { isSaved, toggle: toggleSaved } = useSavedJobs();
   const [trade, setTrade] = useState("All Trades");
   const [location, setLocation] = useState("All Locations");
   const [status, setStatus] = useState("open");
@@ -251,61 +253,72 @@ export default function JobsPage() {
             const TradeIcon = TRADE_ICONS[job.trade] ?? TRADE_ICONS.default;
             const isHot = job.urgency === "asap";
             return (
-              <Link key={job.id} href={`/jobs/${job.id}`}>
-                <Card className={`cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group ${isHot ? "border-red-200" : ""}`}>
-                  <CardContent className="p-5">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div className="flex gap-4 flex-1 min-w-0">
-                        {/* Trade icon bubble */}
-                        <div className={`flex-shrink-0 h-11 w-11 rounded-xl flex items-center justify-center ${isHot ? "bg-red-50" : "bg-primary/8"}`}>
-                          <TradeIcon className={`h-5 w-5 ${isHot ? "text-red-500" : "text-primary"}`} />
+              <div key={job.id} className="relative">
+                <Link href={`/jobs/${job.id}`}>
+                  <Card className={`cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group ${isHot ? "border-red-200" : ""}`}>
+                    <CardContent className="p-5">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="flex gap-4 flex-1 min-w-0">
+                          {/* Trade icon bubble */}
+                          <div className={`flex-shrink-0 h-11 w-11 rounded-xl flex items-center justify-center ${isHot ? "bg-red-50" : "bg-primary/8"}`}>
+                            <TradeIcon className={`h-5 w-5 ${isHot ? "text-red-500" : "text-primary"}`} />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                              <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">{job.title}</h3>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 ${urgencyInfo.color}`}>
+                                {urgencyInfo.label}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
+                                {job.status.replace("_", " ")}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2.5">{job.description}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1 font-medium text-foreground">
+                                <TradeIcon className="h-3 w-3 text-primary" />{job.trade}
+                              </span>
+                              <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
+                              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(job.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}</span>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                            <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">{job.title}</h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 ${urgencyInfo.color}`}>
-                              {urgencyInfo.label}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
-                              {job.status.replace("_", " ")}
-                            </span>
+                        <div className="flex flex-row md:flex-col items-center md:items-end gap-4 md:gap-3 flex-shrink-0 md:min-w-[100px]">
+                          {job.estimatedBudget ? (
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Budget</p>
+                              <p className="font-bold text-base">KES {job.estimatedBudget.toLocaleString()}</p>
+                            </div>
+                          ) : (
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Budget</p>
+                              <p className="text-sm text-muted-foreground">Not set</p>
+                            </div>
+                          )}
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Quotes</p>
+                            <p className={`font-semibold text-sm ${job.quoteCount === 0 ? "text-green-600" : ""}`}>
+                              {job.quoteCount === 0 ? "Be first!" : job.quoteCount}
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2.5">{job.description}</p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                            <span className="flex items-center gap-1 font-medium text-foreground">
-                              <TradeIcon className="h-3 w-3 text-primary" />{job.trade}
-                            </span>
-                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(job.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}</span>
-                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                         </div>
                       </div>
-
-                      <div className="flex flex-row md:flex-col items-center md:items-end gap-4 md:gap-3 flex-shrink-0 md:min-w-[100px]">
-                        {job.estimatedBudget ? (
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Budget</p>
-                            <p className="font-bold text-base">KES {job.estimatedBudget.toLocaleString()}</p>
-                          </div>
-                        ) : (
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Budget</p>
-                            <p className="text-sm text-muted-foreground">Not set</p>
-                          </div>
-                        )}
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Quotes</p>
-                          <p className={`font-semibold text-sm ${job.quoteCount === 0 ? "text-green-600" : ""}`}>
-                            {job.quoteCount === 0 ? "Be first!" : job.quoteCount}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+                {/* Bookmark button — floats top-right, stops Link propagation */}
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(job.id); }}
+                  className={`absolute top-3 right-3 z-10 h-8 w-8 rounded-full flex items-center justify-center transition-all border ${isSaved(job.id) ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-background/80 backdrop-blur text-muted-foreground border-border hover:border-primary/50 hover:text-primary"}`}
+                  aria-label={isSaved(job.id) ? "Remove from saved" : "Save job"}
+                  title={isSaved(job.id) ? "Saved — click to remove" : "Save this job"}
+                >
+                  <Bookmark className={`h-3.5 w-3.5 ${isSaved(job.id) ? "fill-current" : ""}`} />
+                </button>
+              </div>
             );
           })}
         </div>

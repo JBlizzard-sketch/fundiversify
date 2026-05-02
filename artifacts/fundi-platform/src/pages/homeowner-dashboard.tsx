@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign } from "lucide-react";
+import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReviewNudge } from "@/components/review-nudge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSavedJobs } from "@/hooks/use-saved-jobs";
 import {
   useGetJobsSummary,
   useGetSavedContractors,
+  useListJobs,
   getGetJobsSummaryQueryKey,
   getGetSavedContractorsQueryKey,
 } from "@workspace/api-client-react";
@@ -33,7 +35,7 @@ const STAT_CARDS = [
   { key: "disputed",    label: "Disputed",    icon: AlertTriangle, color: "text-red-600 bg-red-50" },
 ];
 
-type Tab = "active" | "history" | "saved" | "spending";
+type Tab = "active" | "history" | "savedJobs" | "saved" | "spending";
 
 export default function HomeownerDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("active");
@@ -58,11 +60,16 @@ export default function HomeownerDashboard() {
 
   const completedCount = historyJobs.filter((j) => j.status === "completed").length;
 
+  const { savedIds } = useSavedJobs();
+  const { data: allJobsData } = useListJobs({ limit: 100 });
+  const savedJobsList = (allJobsData?.jobs ?? []).filter((j) => savedIds.has(j.id));
+
   const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: "active",   label: "Active Jobs",   count: activeJobs.length },
-    { key: "history",  label: "History",       count: historyJobs.length },
-    { key: "saved",    label: "Saved Pros",    count: savedContractors?.length },
-    { key: "spending", label: "Spending" },
+    { key: "active",     label: "Active Jobs",   count: activeJobs.length },
+    { key: "history",    label: "History",       count: historyJobs.length },
+    { key: "savedJobs",  label: "Saved Jobs",    count: savedJobsList.length },
+    { key: "saved",      label: "Saved Pros",    count: savedContractors?.length },
+    { key: "spending",   label: "Spending" },
   ];
 
   return (
@@ -211,6 +218,57 @@ export default function HomeownerDashboard() {
               <CheckCircle className="h-10 w-10 mx-auto mb-3 opacity-20" />
               <p className="font-medium">No completed jobs yet</p>
               <p className="text-sm mt-1">Completed jobs will appear here</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Saved Jobs */}
+      {activeTab === "savedJobs" && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">{savedJobsList.length} saved {savedJobsList.length === 1 ? "job" : "jobs"}</p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/jobs">Browse Jobs <ChevronRight className="h-4 w-4 ml-1" /></Link>
+            </Button>
+          </div>
+          {savedJobsList.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground border rounded-xl">
+              <Bookmark className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <p className="font-medium">No saved jobs yet</p>
+              <p className="text-sm mt-1">Tap the bookmark icon on any job card to save it here</p>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/jobs">Browse Jobs</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {savedJobsList.map((job) => (
+                <Link key={job.id} href={`/jobs/${job.id}`}>
+                  <Card className="cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{job.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{job.location}</span>
+                            <span>· {job.trade}</span>
+                          </p>
+                          {job.estimatedBudget && (
+                            <p className="text-xs font-medium text-foreground mt-1">Budget: KES {job.estimatedBudget.toLocaleString()}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
+                            {job.status.replace("_", " ")}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{job.quoteCount} quote{job.quoteCount !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
           )}
         </div>
