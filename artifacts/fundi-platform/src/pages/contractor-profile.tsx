@@ -17,6 +17,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AvailabilityWidget } from "@/components/availability-widget";
+import { EstimateWidget } from "@/components/estimate-widget";
 
 const HOMEOWNER_ID = 1;
 
@@ -301,6 +302,11 @@ export default function ContractorProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Cost estimate widget */}
+      <div className="mb-6">
+        <EstimateWidget trade={contractor.trade} location={contractor.location} />
+      </div>
 
       {/* Reviews with rating breakdown */}
       <Card>

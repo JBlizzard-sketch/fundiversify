@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useRef, useState, useEffect } from "react";
 import { Confetti } from "@/components/confetti";
+import { JobTimeline } from "@/components/job-timeline";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -419,6 +420,27 @@ export default function JobDetailPage() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Activity timeline */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            Activity Timeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <JobTimeline
+            status={job.status}
+            quoteCount={job.quoteCount}
+            homeownerConfirmed={!!job.homeownerConfirmed}
+            contractorConfirmed={!!job.contractorConfirmed}
+            createdAt={job.createdAt}
+            hasDispute={!!job.dispute}
+            hasReview={!!existingReview}
+          />
         </CardContent>
       </Card>
 
