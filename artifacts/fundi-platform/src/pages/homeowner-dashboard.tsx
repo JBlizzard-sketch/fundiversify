@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReviewNudge } from "@/components/review-nudge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +67,7 @@ export default function HomeownerDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-10">
+      <ReviewNudge completedJobs={historyJobs.filter((j) => j.status === "completed").map((j) => ({ id: j.id, title: j.title, trade: j.trade }))} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-1">My Dashboard</h1>

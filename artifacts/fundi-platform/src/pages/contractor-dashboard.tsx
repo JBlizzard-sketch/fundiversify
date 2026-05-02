@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
 import { Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X, Zap, ShieldCheck, TrendingUp, MapPin, Clock, Sparkles, AlertCircle } from "lucide-react";
+import { ReferralCard } from "@/components/referral-card";
 import { AvailabilityWidget } from "@/components/availability-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -458,6 +459,9 @@ export default function ContractorDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Referral */}
+          <ReferralCard contractorId={CONTRACTOR_ID} contractorName={contractor?.name} />
         </TabsContent>
       </Tabs>
     </div>

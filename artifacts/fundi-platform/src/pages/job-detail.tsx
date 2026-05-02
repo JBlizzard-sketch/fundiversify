@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare, AlertTriangle, X, ShieldAlert, ChevronRight } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare, AlertTriangle, X, ShieldAlert, ChevronRight, LayoutGrid, List, Trophy, Zap, TrendingDown, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -242,6 +242,8 @@ export default function JobDetailPage() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: job, isLoading } = useGetJob(id, {
@@ -252,7 +254,7 @@ export default function JobDetailPage() {
     query: {
       enabled: !!id,
       queryKey: getGetJobMessagesQueryKey(id),
-      refetchInterval: 8000,
+      refetchInterval: 3000,
     },
   });
 
@@ -515,31 +517,69 @@ export default function JobDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="max-h-80 overflow-y-auto px-4 py-2 space-y-3">
+          <div className="max-h-80 overflow-y-auto px-4 py-3 space-y-2">
             {messages.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-6">No messages yet. Start the conversation!</p>
-            ) : messages.map((m) => {
+              <div className="text-center py-8">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-muted-foreground text-sm">No messages yet. Start the conversation!</p>
+              </div>
+            ) : messages.map((m, idx) => {
               const isMe = m.senderRole === activeRole;
+              const prevMsg = messages[idx - 1];
+              const showAvatar = !prevMsg || prevMsg.senderRole !== m.senderRole;
+              const showName = showAvatar;
               return (
-                <div key={m.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                  <Avatar className="h-7 w-7 flex-shrink-0">
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {m.senderName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
-                    <div className={`px-3 py-2 rounded-xl text-sm ${isMe ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                <div key={m.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"} ${!showAvatar ? (isMe ? "mr-9" : "ml-9") : ""}`}>
+                  {showAvatar ? (
+                    <Avatar className="h-8 w-8 flex-shrink-0 mt-0.5">
+                      <AvatarFallback className={`text-xs font-semibold ${isMe ? "bg-primary/15 text-primary" : "bg-muted-foreground/15 text-muted-foreground"}`}>
+                        {m.senderName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : null}
+                  <div className={`max-w-[72%] flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
+                    {showName && (
+                      <span className="text-xs text-muted-foreground px-1 font-medium">{m.senderName}</span>
+                    )}
+                    <div className={`px-3.5 py-2 text-sm leading-relaxed break-words shadow-sm ${
+                      isMe
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm"
+                        : "bg-muted rounded-2xl rounded-tl-sm"
+                    }`}>
                       {m.content}
                     </div>
-                    <span className="text-xs text-muted-foreground px-1">
-                      {m.senderName} · {new Date(m.createdAt).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}
+                    <span className="text-[10px] text-muted-foreground px-1">
+                      {new Date(m.createdAt).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
                 </div>
               );
             })}
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex gap-2 items-end">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="text-xs bg-muted-foreground/15 text-muted-foreground">DC</AvatarFallback>
+                </Avatar>
+                <div className="bg-muted px-4 py-3 rounded-2xl rounded-tl-sm flex gap-1 items-center">
+                  {[0,1,2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-2 w-2 rounded-full bg-muted-foreground/50"
+                      style={{ animation: `typing-dot 1.2s ${i * 0.2}s infinite ease-in-out` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
+          <style>{`
+            @keyframes typing-dot {
+              0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+              40% { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
           <Separator />
           <div className="p-4 space-y-3">
             <div className="flex gap-2 text-xs">
@@ -568,7 +608,11 @@ export default function JobDetailPage() {
                   }
                 }}
               />
-              <Button size="icon" disabled={!msgText.trim() || sendMessage.isPending} onClick={() => { if (!msgText.trim()) return; sendMessage.mutate({ id, data: { senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID, senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor", senderRole: activeRole, content: msgText.trim() } }); }}>
+              <Button size="icon" disabled={!msgText.trim() || sendMessage.isPending} onClick={() => {
+                if (!msgText.trim()) return;
+                sendMessage.mutate({ id, data: { senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID, senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor", senderRole: activeRole, content: msgText.trim() } });
+                if (activeRole === "homeowner") { setIsTyping(true); setTimeout(() => setIsTyping(false), 2500); }
+              }}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -577,48 +621,171 @@ export default function JobDetailPage() {
       </Card>
 
       {/* Quotes */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Quotes ({job.quotes?.length ?? 0})</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {job.quotes && job.quotes.length > 0 ? job.quotes.map((quote: any) => (
-            <div key={quote.id} className={`p-4 rounded-lg border ${quote.status === "accepted" ? "border-primary bg-primary/5" : "bg-muted/30"}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={quote.contractorAvatarUrl ?? ""} />
-                    <AvatarFallback>{quote.contractorName.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{quote.contractorName}</span>
-                      {quote.contractorTier === "pro" && <Badge className="text-xs py-0">Pro</Badge>}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      {quote.contractorRating.toFixed(1)} · {quote.estimatedDays} days
-                    </div>
+      {(() => {
+        const quotes: any[] = job.quotes ?? [];
+        const canAccept = job.status === "open" || job.status === "quoted";
+        const lowestPrice = quotes.length > 1 ? Math.min(...quotes.map((q: any) => q.amount)) : null;
+        const highestRating = quotes.length > 1 ? Math.max(...quotes.map((q: any) => q.contractorRating)) : null;
+        const bestValue = quotes.length > 1
+          ? quotes.reduce((best: any, q: any) => {
+              const score = (q.contractorRating / 5) * 0.6 + (1 - q.amount / Math.max(...quotes.map((x: any) => x.amount))) * 0.4;
+              const bScore = (best.contractorRating / 5) * 0.6 + (1 - best.amount / Math.max(...quotes.map((x: any) => x.amount))) * 0.4;
+              return score > bScore ? q : best;
+            }, quotes[0])
+          : null;
+
+        return (
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle>Quotes ({quotes.length})</CardTitle>
+                {quotes.length > 1 && (
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <button
+                      onClick={() => setCompareMode(false)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${!compareMode ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                    >
+                      <List className="h-3.5 w-3.5" />List
+                    </button>
+                    <button
+                      onClick={() => setCompareMode(true)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${compareMode ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />Compare
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {quotes.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-6">No quotes yet — be the first to quote!</p>
+              ) : compareMode ? (
+                /* ── Compare grid ── */
+                <div className="overflow-x-auto -mx-2 px-2">
+                  <div className="flex gap-3 min-w-max pb-2">
+                    {quotes.map((quote: any) => {
+                      const isAccepted = quote.status === "accepted";
+                      const isBestValue = bestValue?.id === quote.id;
+                      const isLowest = lowestPrice !== null && quote.amount === lowestPrice;
+                      const isTopRated = highestRating !== null && quote.contractorRating === highestRating;
+                      return (
+                        <div
+                          key={quote.id}
+                          className={`w-52 flex-shrink-0 rounded-xl border-2 p-4 flex flex-col gap-3 ${isAccepted ? "border-primary bg-primary/5" : isBestValue ? "border-amber-400 bg-amber-50/30" : "border-border bg-card"}`}
+                        >
+                          {/* Badges */}
+                          <div className="flex flex-wrap gap-1 min-h-[20px]">
+                            {isAccepted && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><CheckCircle className="h-3 w-3" />Accepted</span>}
+                            {isBestValue && !isAccepted && <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><Trophy className="h-3 w-3" />Best Value</span>}
+                            {isLowest && !isBestValue && <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><TrendingDown className="h-3 w-3" />Lowest</span>}
+                            {isTopRated && !isBestValue && !isLowest && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><Star className="h-3 w-3" />Top Rated</span>}
+                          </div>
+
+                          {/* Contractor */}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-9 w-9 flex-shrink-0">
+                              <AvatarImage src={quote.contractorAvatarUrl ?? ""} />
+                              <AvatarFallback className="text-xs">{quote.contractorName.slice(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{quote.contractorName}</p>
+                              {quote.contractorTier === "pro" && <Badge className="text-xs py-0 px-1.5">Pro</Badge>}
+                            </div>
+                          </div>
+
+                          {/* Metrics */}
+                          <div className="space-y-2 text-sm border-t pt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground text-xs">Price</span>
+                              <span className="font-bold text-base text-primary">KES {quote.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground text-xs">Duration</span>
+                              <span className="font-medium text-sm">{quote.estimatedDays}d</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground text-xs">Rating</span>
+                              <span className="flex items-center gap-1 font-medium text-sm">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                {quote.contractorRating.toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground text-xs">Verified</span>
+                              <ShieldCheck className={`h-4 w-4 ${quote.contractorVerified ? "text-primary" : "text-muted-foreground/30"}`} />
+                            </div>
+                          </div>
+
+                          {/* Action */}
+                          {!isAccepted && canAccept && (
+                            <Button
+                              size="sm"
+                              className="w-full mt-1"
+                              onClick={() => updateQuote.mutate({ id: quote.id, data: { status: "accepted" } })}
+                              disabled={updateQuote.isPending}
+                            >
+                              Accept
+                            </Button>
+                          )}
+                          {isAccepted && (
+                            <Link href={`/contractors/${quote.contractorId}`}>
+                              <Button size="sm" variant="outline" className="w-full mt-1">View Profile</Button>
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg">KES {quote.amount.toLocaleString()}</p>
-                  {quote.status === "accepted" ? (
-                    <span className="text-xs text-primary font-medium flex items-center gap-1 justify-end"><CheckCircle className="h-3 w-3" />Accepted</span>
-                  ) : (job.status === "open" || job.status === "quoted") ? (
-                    <Button size="sm" variant="outline" className="mt-1" onClick={() => updateQuote.mutate({ id: quote.id, data: { status: "accepted" } })} disabled={updateQuote.isPending}>
-                      Accept Quote
-                    </Button>
-                  ) : null}
+              ) : (
+                /* ── List view ── */
+                <div className="space-y-3">
+                  {quotes.map((quote: any) => {
+                    const isAccepted = quote.status === "accepted";
+                    const isBestValue = bestValue?.id === quote.id && quotes.length > 1;
+                    return (
+                      <div key={quote.id} className={`p-4 rounded-xl border-2 ${isAccepted ? "border-primary bg-primary/5" : isBestValue ? "border-amber-300 bg-amber-50/20" : "border-border bg-muted/20"}`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={quote.contractorAvatarUrl ?? ""} />
+                              <AvatarFallback>{quote.contractorName.slice(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm">{quote.contractorName}</span>
+                                {quote.contractorTier === "pro" && <Badge className="text-xs py-0">Pro</Badge>}
+                                {isBestValue && <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5"><Trophy className="h-3 w-3" />Best value</span>}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                                <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{quote.contractorRating.toFixed(1)}</span>
+                                <span>{quote.estimatedDays} days</span>
+                                {quote.contractorVerified && <span className="flex items-center gap-1 text-primary"><ShieldCheck className="h-3 w-3" />Verified</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-bold text-xl">KES {quote.amount.toLocaleString()}</p>
+                            {isAccepted ? (
+                              <span className="text-xs text-primary font-medium flex items-center gap-1 justify-end mt-1"><CheckCircle className="h-3 w-3" />Accepted</span>
+                            ) : canAccept ? (
+                              <Button size="sm" variant="outline" className="mt-1.5" onClick={() => updateQuote.mutate({ id: quote.id, data: { status: "accepted" } })} disabled={updateQuote.isPending}>
+                                Accept Quote
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                        {quote.message && <p className="text-sm text-muted-foreground mt-3 pt-3 border-t leading-relaxed">{quote.message}</p>}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-              {quote.message && <p className="text-sm text-muted-foreground mt-3 border-t pt-3">{quote.message}</p>}
-            </div>
-          )) : (
-            <p className="text-muted-foreground text-sm text-center py-4">No quotes yet — be the first to quote!</p>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Submit Quote */}
       {(job.status === "open" || job.status === "quoted") && (
