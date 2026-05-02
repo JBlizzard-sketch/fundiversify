@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare, AlertTriangle, X, ShieldAlert, ChevronRight, LayoutGrid, List, Trophy, Zap, TrendingDown, ShieldCheck } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare, AlertTriangle, X, ShieldAlert, ChevronRight, LayoutGrid, List, Trophy, Zap, TrendingDown, ShieldCheck, Target, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -659,6 +659,52 @@ export default function JobDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Quotes-ready smart banner */}
+      {(() => {
+        const quotes: any[] = job.quotes ?? [];
+        if (quotes.length < 3 || job.status !== "quoted") return null;
+        const maxAmount = Math.max(...quotes.map((q: any) => q.amount));
+        const lowestPriceQ = Math.min(...quotes.map((q: any) => q.amount));
+        const maxJobsQ = Math.max(...quotes.map((q: any) => q.contractorJobsCompleted ?? 0), 1);
+        const topByScore = quotes.reduce((best: any, q: any) => {
+          const ps = maxAmount > lowestPriceQ ? 1 - (q.amount - lowestPriceQ) / (maxAmount - lowestPriceQ + 1) : 1;
+          const rs = q.contractorRating / 5;
+          const vs = q.contractorVerified ? 1 : 0;
+          const js = Math.min((q.contractorJobsCompleted ?? 0) / maxJobsQ, 1);
+          const sc = Math.round(ps * 40 + rs * 40 + vs * 10 + js * 10);
+          const bp = maxAmount > lowestPriceQ ? 1 - (best.amount - lowestPriceQ) / (maxAmount - lowestPriceQ + 1) : 1;
+          const bsc = Math.round(bp * 40 + (best.contractorRating / 5) * 40 + (best.contractorVerified ? 1 : 0) * 10 + Math.min((best.contractorJobsCompleted ?? 0) / maxJobsQ, 1) * 10);
+          return sc > bsc ? q : best;
+        }, quotes[0]);
+        return (
+          <div className="mb-6 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Bell className="h-4 w-4 text-violet-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="font-semibold text-violet-900">
+                    {quotes.length} pros have quoted — ready to compare!
+                  </p>
+                  <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full font-medium">
+                    {quotes.length} quotes
+                  </span>
+                </div>
+                <p className="text-sm text-violet-700/80">
+                  Top FundiScore™ pick: <span className="font-semibold text-violet-900">{topByScore.contractorName}</span> at <span className="font-semibold">KES {topByScore.amount.toLocaleString()}</span>
+                </p>
+              </div>
+              <a href="#quotes" className="flex-shrink-0">
+                <button className="text-xs font-semibold text-violet-700 bg-violet-100 hover:bg-violet-200 px-3 py-1.5 rounded-lg transition-colors">
+                  Review →
+                </button>
+              </a>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Quotes */}
       {(() => {
         const quotes: any[] = job.quotes ?? [];
@@ -858,6 +904,83 @@ export default function JobDetailPage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Job Match Score — shown to contractor before submitting */}
+      {(job.status === "open" || job.status === "quoted") && (() => {
+        const CONTRACTOR_TRADE    = "Plumbing";
+        const CONTRACTOR_LOCATION = "Westlands";
+        const CONTRACTOR_YEARS    = 8;
+        const CONTRACTOR_RATING   = 4.8;
+        const CONTRACTOR_VERIFIED = true;
+
+        const tradeMatch    = job.trade?.toLowerCase() === CONTRACTOR_TRADE.toLowerCase() ? 100 : 50;
+        const locationMatch = job.location?.toLowerCase() === CONTRACTOR_LOCATION.toLowerCase() ? 100 : 60;
+        const expScore      = Math.min(Math.round((CONTRACTOR_YEARS / 10) * 100), 100);
+        const ratingScore   = Math.round((CONTRACTOR_RATING / 5) * 100);
+        const overall       = Math.round(tradeMatch * 0.4 + locationMatch * 0.2 + expScore * 0.2 + ratingScore * 0.2);
+
+        const breakdown = [
+          { label: "Trade match",       value: tradeMatch,    detail: tradeMatch === 100 ? `You specialise in ${job.trade}` : "Adjacent trade" },
+          { label: "Location",          value: locationMatch, detail: locationMatch === 100 ? `You work in ${job.location}` : "Nearby area" },
+          { label: "Experience",        value: expScore,      detail: `${CONTRACTOR_YEARS} years in the trade` },
+          { label: "Reputation",        value: ratingScore,   detail: `${CONTRACTOR_RATING}/5 average rating` },
+        ];
+
+        const color = overall >= 80 ? "text-green-600" : overall >= 60 ? "text-amber-600" : "text-muted-foreground";
+        const barColor = overall >= 80 ? "bg-green-500" : overall >= 60 ? "bg-amber-500" : "bg-muted-foreground/40";
+        const borderColor = overall >= 80 ? "border-green-200 bg-green-50/40" : overall >= 60 ? "border-amber-200 bg-amber-50/30" : "border-border";
+
+        return (
+          <Card className={`mb-6 ${borderColor}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="h-4 w-4 text-primary" />
+                Your Match Score
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">How well this job fits your profile before you quote</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Overall score */}
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center justify-center h-16 w-16 rounded-2xl border-2 border-current flex-shrink-0" style={{ color: overall >= 80 ? "#16a34a" : overall >= 60 ? "#d97706" : "#6b7280" }}>
+                  <span className="text-2xl font-bold leading-none">{overall}</span>
+                  <span className="text-[10px] font-medium opacity-70">/ 100</span>
+                </div>
+                <div className="flex-1">
+                  <p className={`text-base font-semibold mb-1 ${color}`}>
+                    {overall >= 80 ? "Strong match — great opportunity!" : overall >= 60 ? "Good match — worth quoting" : "Partial match — consider carefully"}
+                  </p>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${overall}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Breakdown */}
+              <div className="grid grid-cols-2 gap-2">
+                {breakdown.map(({ label, value, detail }) => (
+                  <div key={label} className="p-2.5 rounded-lg bg-background border">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span className={`text-xs font-bold ${value >= 80 ? "text-green-600" : value >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>{value}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-muted overflow-hidden mb-1.5">
+                      <div className={`h-full rounded-full ${value >= 80 ? "bg-green-500" : value >= 60 ? "bg-amber-400" : "bg-muted-foreground/40"}`} style={{ width: `${value}%` }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">{detail}</p>
+                  </div>
+                ))}
+              </div>
+              {CONTRACTOR_VERIFIED && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/15">
+                  <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                  <p className="text-xs text-primary font-medium">You're a Verified contractor — homeowners trust you more</p>
                 </div>
               )}
             </CardContent>

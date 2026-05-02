@@ -129,6 +129,36 @@ export default function HomeownerDashboard() {
         ))}
       </div>
 
+      {/* Quick Post templates — always visible above active jobs */}
+      {activeTab === "active" && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Quick Post</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+            {[
+              { emoji: "🖌️", label: "Repaint bedroom",    trade: "Painting",   title: "Repaint 1 bedroom",          loc: "Westlands", budget: "8000"  },
+              { emoji: "🔧", label: "Fix leaking pipe",   trade: "Plumbing",   title: "Fix leaking pipe in kitchen", loc: "Kilimani",  budget: "4000"  },
+              { emoji: "⚡", label: "Rewire socket",      trade: "Electrical", title: "Rewire faulty wall socket",   loc: "Parklands", budget: "3000"  },
+              { emoji: "🟦", label: "Lay floor tiles",    trade: "Tiling",     title: "Lay floor tiles in bathroom", loc: "Karen",     budget: "15000" },
+              { emoji: "🏠", label: "Roof repair",        trade: "Roofing",    title: "Fix leaking section of roof", loc: "Kasarani",  budget: "20000" },
+              { emoji: "🪵", label: "Build wardrobe",     trade: "Carpentry",  title: "Build fitted bedroom wardrobe", loc: "Lavington", budget: "25000" },
+              { emoji: "❄️", label: "Service AC",         trade: "HVAC",       title: "Service and clean AC unit",   loc: "Westlands", budget: "6000"  },
+              { emoji: "🔨", label: "General repairs",    trade: "Fundi",      title: "General home repairs needed", loc: "Roysambu",  budget: "5000"  },
+            ].map((t) => {
+              const params = new URLSearchParams({ trade: t.trade, title: t.title, location: t.loc, budget: t.budget });
+              return (
+                <Link key={t.label} href={`/jobs/new?${params}`}>
+                  <div className="flex-shrink-0 flex flex-col items-center gap-1.5 px-3.5 py-3 rounded-xl border bg-card hover:border-primary/50 hover:bg-primary/3 transition-all cursor-pointer text-center min-w-[90px]">
+                    <span className="text-2xl">{t.emoji}</span>
+                    <span className="text-xs font-medium leading-tight">{t.label}</span>
+                    <span className="text-[10px] text-muted-foreground">KES {parseInt(t.budget).toLocaleString()}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Active Jobs */}
       {activeTab === "active" && (
         <div className="space-y-4">
