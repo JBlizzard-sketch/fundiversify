@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useListContractors } from "@workspace/api-client-react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 const TRADES = ["All Trades", "Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
 const LOCATIONS = ["All Locations", "Westlands", "Kilimani", "Karen", "Kasarani", "Parklands", "Lavington", "Eastleigh", "South B", "Langata", "Ruaka"];
@@ -42,6 +43,7 @@ const MIN_RATING_OPTIONS = [
 ];
 
 export default function ContractorsPage() {
+  usePageMeta("Find a Pro", "Browse verified plumbers, electricians, painters and more in Nairobi. Read real reviews and get instant quotes.");
   const rawSearch = useSearch();
   const params = new URLSearchParams(rawSearch);
 

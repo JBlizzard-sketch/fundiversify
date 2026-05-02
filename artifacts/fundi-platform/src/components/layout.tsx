@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_LINKS = [
   { href: "/contractors", label: "Find a Pro" },
@@ -131,6 +132,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <NotificationBell role="homeowner" />
               <NotificationBell role="contractor" />
             </div>
+            <ThemeToggle />
             <div className="h-5 w-px bg-border mx-1" />
             <Show when="signed-out">
               <Button variant="outline" size="sm" asChild>

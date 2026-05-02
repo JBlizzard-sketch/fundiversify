@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { StatsBanner } from "@/components/stats-bar";
 import { ReviewMarquee } from "@/components/review-marquee";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ const LOCATIONS = [
 ];
 
 export default function Home() {
+  usePageMeta("Find Verified Contractors in Nairobi", "Hire trusted, background-checked plumbers, electricians, painters and more. Post a job free and get quotes from verified fundis near you.");
   const [searchTerm, setSearchTerm] = useState("");
   const [location, setLocation] = useState("");
   const [, navigate] = useLocation();

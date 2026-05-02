@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListJobs } from "@workspace/api-client-react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 const TRADES = ["All Trades", "Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
 const LOCATIONS = ["All Locations", "Westlands", "Kilimani", "Karen", "Kasarani", "Parklands", "Lavington", "Eastleigh", "South B", "Langata"];
@@ -56,6 +57,7 @@ const BUDGET_PRESETS = [
 ];
 
 export default function JobsPage() {
+  usePageMeta("Browse Jobs", "Browse open home service jobs in Nairobi. Submit quotes and win work as a verified fundi.");
   const [trade, setTrade] = useState("All Trades");
   const [location, setLocation] = useState("All Locations");
   const [status, setStatus] = useState("open");

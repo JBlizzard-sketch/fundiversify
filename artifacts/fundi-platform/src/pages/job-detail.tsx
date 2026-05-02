@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useRef, useState, useEffect } from "react";
+import { Confetti } from "@/components/confetti";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetJob,
@@ -244,11 +246,25 @@ export default function JobDetailPage() {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [confettiActive, setConfettiActive] = useState(false);
+  const prevStatusRef = useRef<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: job, isLoading } = useGetJob(id, {
     query: { enabled: !!id, queryKey: getGetJobQueryKey(id) },
   });
+
+  usePageMeta(job ? job.title : "Job Details", job ? `${job.trade} job in ${job.location} — view quotes, messages and status on FundiVerify.` : undefined);
+
+  useEffect(() => {
+    const current = job?.status;
+    if (prevStatusRef.current !== undefined && prevStatusRef.current !== "completed" && current === "completed") {
+      setConfettiActive(true);
+      const t = setTimeout(() => setConfettiActive(false), 5500);
+      return () => clearTimeout(t);
+    }
+    prevStatusRef.current = current;
+  }, [job?.status]);
 
   const { data: messages = [] } = useGetJobMessages(id, {
     query: {
@@ -340,6 +356,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
+      <Confetti active={confettiActive} />
       {showDisputeModal && (
         <DisputeModal
           jobId={id}
