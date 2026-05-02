@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign, MapPin, Gift } from "lucide-react";
+import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign, MapPin, Gift, RefreshCw } from "lucide-react";
 import { ReferralCard } from "@/components/referral-card";
 import { Button } from "@/components/ui/button";
 import { ReviewNudge } from "@/components/review-nudge";
@@ -165,30 +165,43 @@ export default function HomeownerDashboard() {
           {summaryLoading ? (
             Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)
           ) : activeJobs.length > 0 ? activeJobs.map((job) => (
-            <Link key={job.id} href={`/jobs/${job.id}`}>
-              <Card className="cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${job.status === "open" ? "bg-blue-500" : job.status === "quoted" ? "bg-amber-500 animate-pulse" : "bg-violet-500"}`} />
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{job.title}</p>
-                        <p className="text-xs text-muted-foreground">{job.location} · {job.trade}</p>
-                        {job.estimatedBudget && (
-                          <p className="text-xs text-muted-foreground">Budget: KES {job.estimatedBudget.toLocaleString()}</p>
-                        )}
+            <div key={job.id} className="relative">
+              <Link href={`/jobs/${job.id}`}>
+                <Card className="cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${job.status === "open" ? "bg-blue-500" : job.status === "quoted" ? "bg-amber-500 animate-pulse" : "bg-violet-500"}`} />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{job.title}</p>
+                          <p className="text-xs text-muted-foreground">{job.location} · {job.trade}</p>
+                          {job.estimatedBudget && (
+                            <p className="text-xs text-muted-foreground">Budget: KES {job.estimatedBudget.toLocaleString()}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
+                          {job.status.replace("_", " ")}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
-                        {job.status.replace("_", " ")}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+              {/* Re-post button for open jobs with no activity */}
+              {job.status === "open" && (
+                <Link href={`/jobs/new?rebook=${job.id}`}>
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-2 right-9 z-10 text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                  >
+                    <RotateCcw className="h-2.5 w-2.5" />Re-post
+                  </button>
+                </Link>
+              )}
+            </div>
           )) : (
             <div className="text-center py-16 text-muted-foreground">
               <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-20" />

@@ -255,6 +255,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <li><Link href="/jobs/new" className="hover:text-primary transition-colors">Post a Job</Link></li>
               <li><Link href="/estimate" className="hover:text-primary transition-colors">Cost Estimator</Link></li>
               <li><Link href="/dashboard/homeowner" className="hover:text-primary transition-colors">My Dashboard</Link></li>
+              <li><Link href="/reviews" className="hover:text-primary transition-colors">Homeowner Reviews</Link></li>
             </ul>
           </div>
           <div>

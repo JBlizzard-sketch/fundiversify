@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearch, Link } from "wouter";
-import { ArrowLeft, ArrowRight, Calculator, CheckCircle, MapPin, Briefcase, Clock, FileText, DollarSign, Camera, X, ImagePlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, CheckCircle, MapPin, Briefcase, Clock, FileText, DollarSign, Camera, X, ImagePlus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCreateJob, useGetJobEstimate, getGetJobEstimateQueryKey } from "@workspace/api-client-react";
+import { useCreateJob, useGetJobEstimate, useGetJob, getGetJobEstimateQueryKey } from "@workspace/api-client-react";
 
 const TRADES = ["Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
 const LOCATIONS = ["Westlands", "Kilimani", "Karen", "Kasarani", "Parklands", "Lavington", "Eastleigh", "South B", "Langata", "Ruaka", "Roysambu", "Thika Road"];
@@ -28,16 +28,34 @@ export default function PostJobPage() {
   const urlParams = new URLSearchParams(rawSearch);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const rebookId = urlParams.get("rebook") ? parseInt(urlParams.get("rebook")!) : null;
+  const { data: rebookJob } = useGetJob(rebookId ?? 0, { query: { enabled: !!rebookId } });
+
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    title: "",
-    trade: urlParams.get("trade") ?? "",
-    location: urlParams.get("location") ?? "",
-    description: "",
-    estimatedBudget: "",
-    urgency: "flexible",
+    title:           urlParams.get("title") ?? "",
+    trade:           urlParams.get("trade") ?? "",
+    location:        urlParams.get("location") ?? "",
+    description:     "",
+    estimatedBudget: urlParams.get("budget") ?? "",
+    urgency:         "flexible",
   });
   const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
+
+  useEffect(() => {
+    if (!rebookJob) return;
+    const bumpedBudget = rebookJob.estimatedBudget
+      ? String(Math.round(rebookJob.estimatedBudget * 1.1))
+      : "";
+    setForm({
+      title:           rebookJob.title ?? "",
+      trade:           rebookJob.trade ?? "",
+      location:        rebookJob.location ?? "",
+      description:     rebookJob.description ?? "",
+      estimatedBudget: bumpedBudget,
+      urgency:         rebookJob.urgency ?? "flexible",
+    });
+  }, [rebookJob]);
 
   const { data: estimate } = useGetJobEstimate(
     { trade: form.trade, location: form.location },
@@ -78,6 +96,19 @@ export default function PostJobPage() {
       <Button variant="ghost" asChild className="mb-6 -ml-2">
         <Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-2" />Back to Jobs</Link>
       </Button>
+
+      {/* Rebook banner */}
+      {rebookId && rebookJob && (
+        <div className="mb-6 flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
+          <RotateCcw className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-800 text-sm">Re-posting a previous job</p>
+            <p className="text-xs text-amber-700/80 mt-0.5">
+              Pre-filled from "<span className="font-medium">{rebookJob.title}</span>". Budget bumped 10% to attract more quotes — adjust as needed.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-1">Post a Job</h1>

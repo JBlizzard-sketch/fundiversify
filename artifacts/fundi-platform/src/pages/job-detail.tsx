@@ -1019,6 +1019,131 @@ export default function JobDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Two-way rating — contractor rates the homeowner after job is complete */}
+      {job.status === "completed" && <HomeownerRatingCard jobId={id} homeownerName={HOMEOWNER_NAME} />}
     </div>
+  );
+}
+
+const STORAGE_KEY = "fv_homeowner_ratings_v1";
+
+function loadRatings(): Record<number, { rating: number; comment: string }> {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"); } catch { return {}; }
+}
+
+function HomeownerRatingCard({ jobId, homeownerName }: { jobId: number; homeownerName: string }) {
+  const saved = loadRatings()[jobId];
+  const [rating, setRating] = useState(saved?.rating ?? 0);
+  const [comment, setComment] = useState(saved?.comment ?? "");
+  const [submitted, setSubmitted] = useState(!!saved);
+  const [hover, setHover] = useState(0);
+
+  const ASPECTS = [
+    { label: "Clear brief",          icon: "📋" },
+    { label: "Prompt payment",       icon: "💳" },
+    { label: "Respectful on site",   icon: "🤝" },
+    { label: "Accurate description", icon: "✅" },
+  ];
+  const [aspects, setAspects] = useState<string[]>(saved ? [] : []);
+
+  function submit() {
+    if (!rating) return;
+    const all = loadRatings();
+    all[jobId] = { rating, comment };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    setSubmitted(true);
+  }
+
+  const LABELS = ["", "Poor", "Below average", "Average", "Good", "Excellent"];
+
+  return (
+    <Card className="border-primary/20 bg-primary/3">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Star className="h-4 w-4 text-amber-500" />
+          Rate {homeownerName}
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Help future contractors know what to expect from this homeowner.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {submitted ? (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-green-800 text-sm">Rating submitted — thank you!</p>
+              <div className="flex gap-0.5 mt-1">
+                {[1,2,3,4,5].map((s) => (
+                  <Star key={s} className={`h-4 w-4 ${s <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                ))}
+              </div>
+              {comment && <p className="text-xs text-green-700/80 mt-1 italic">"{comment}"</p>}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Star picker */}
+            <div>
+              <p className="text-sm font-medium mb-2">Overall experience with this homeowner</p>
+              <div className="flex items-center gap-1 mb-1">
+                {[1,2,3,4,5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onMouseEnter={() => setHover(s)}
+                    onMouseLeave={() => setHover(0)}
+                    onClick={() => setRating(s)}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star className={`h-7 w-7 transition-colors ${s <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                  </button>
+                ))}
+                {(hover || rating) > 0 && (
+                  <span className="text-sm text-muted-foreground ml-2">{LABELS[hover || rating]}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Aspect chips */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">What went well? (optional)</p>
+              <div className="flex flex-wrap gap-2">
+                {ASPECTS.map(({ label, icon }) => {
+                  const on = aspects.includes(label);
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setAspects((a) => on ? a.filter((x) => x !== label) : [...a, label])}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${on ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary/40"}`}
+                    >
+                      <span>{icon}</span>{label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Comment */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Comment (optional)</label>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                rows={2}
+                placeholder="e.g. Clear brief, paid on time, easy to communicate with…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+            </div>
+
+            <Button disabled={!rating} onClick={submit} className="w-full sm:w-auto">
+              Submit Rating
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

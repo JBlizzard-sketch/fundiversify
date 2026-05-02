@@ -195,58 +195,93 @@ export default function ContractorDashboard() {
         </Card>
       )}
 
-      {/* Profile Completeness Meter */}
-      {contractor && completenessPercent < 100 && (
-        <Card className="mb-6 border-blue-200 bg-blue-50/40">
-          <CardContent className="p-5">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                  <span className="font-semibold text-sm text-blue-800">Complete your profile — {completenessPercent}% done</span>
-                </div>
-                <p className="text-xs text-blue-700/80 mb-3">
-                  A complete profile gets up to 4× more views. {completenessItems.length - completedCount} item{completenessItems.length - completedCount !== 1 ? "s" : ""} left.
-                </p>
-                {/* Progress bar */}
-                <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden mb-4">
-                  <div
-                    className="h-full rounded-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${completenessPercent}%` }}
-                  />
-                </div>
-                {/* Checklist */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {completenessItems.map(({ label, done }) => (
-                    <div key={label} className={`flex items-center gap-2 text-xs ${done ? "text-green-700" : "text-blue-700"}`}>
-                      {done
-                        ? <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                        : <div className="h-3.5 w-3.5 rounded-full border-2 border-blue-400 flex-shrink-0" />
-                      }
-                      <span className={done ? "line-through opacity-60" : ""}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Button asChild variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100 flex-shrink-0">
-                <Link href={`/contractors/${CONTRACTOR_ID}`}>Edit Profile</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Profile Strength Meter */}
+      {contractor && (() => {
+        const tier =
+          completenessPercent === 100 ? { label: "Expert", color: "text-green-700", bg: "bg-green-50", border: "border-green-200", bar: "bg-green-500", ring: "#16a34a" } :
+          completenessPercent >= 70  ? { label: "Strong",  color: "text-primary",   bg: "bg-primary/5", border: "border-primary/20", bar: "bg-primary",    ring: "hsl(153 38% 30%)" } :
+          completenessPercent >= 40  ? { label: "Growing", color: "text-blue-700",  bg: "bg-blue-50",   border: "border-blue-200",   bar: "bg-blue-500",   ring: "#2563eb" } :
+                                       { label: "Starter", color: "text-amber-700", bg: "bg-amber-50",  border: "border-amber-200",  bar: "bg-amber-500",  ring: "#d97706" };
 
-      {contractor && completenessPercent === 100 && (
-        <Card className="mb-6 border-green-200 bg-green-50/40">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-            <div>
-              <p className="font-medium text-sm text-green-800">Profile 100% complete!</p>
-              <p className="text-xs text-green-700/80">Your profile is fully set up. Homeowners can find everything they need to hire you.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        const PROFILE_ACTIONS: Record<string, string> = {
+          "Profile photo":             `/contractors/${CONTRACTOR_ID}`,
+          "Bio written":               `/contractors/${CONTRACTOR_ID}`,
+          "Phone number":              `/contractors/${CONTRACTOR_ID}`,
+          "Specializations added":     `/contractors/${CONTRACTOR_ID}`,
+          "Years experience":          `/contractors/${CONTRACTOR_ID}`,
+          "ID document uploaded":      `/contractors/${CONTRACTOR_ID}`,
+          "Business permit uploaded":  `/contractors/${CONTRACTOR_ID}`,
+        };
+
+        const circumference = 2 * Math.PI * 28;
+        const dash = (completenessPercent / 100) * circumference;
+
+        return (
+          <Card className={`mb-6 ${tier.border} ${tier.bg}`}>
+            <CardContent className="p-5">
+              <div className="flex items-start gap-5">
+                {/* Circular gauge */}
+                <div className="flex-shrink-0 relative flex items-center justify-center">
+                  <svg width="72" height="72" className="-rotate-90">
+                    <circle cx="36" cy="36" r="28" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
+                    <circle
+                      cx="36" cy="36" r="28" fill="none" strokeWidth="6"
+                      stroke={tier.ring}
+                      strokeDasharray={`${dash} ${circumference}`}
+                      strokeLinecap="round"
+                      className="transition-all duration-700"
+                    />
+                  </svg>
+                  <div className="absolute text-center">
+                    <p className={`text-lg font-bold leading-none ${tier.color}`}>{completenessPercent}</p>
+                    <p className="text-[9px] text-muted-foreground font-medium">%</p>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <p className={`font-bold text-sm ${tier.color}`}>Profile Strength: {tier.label}</p>
+                    {completenessPercent === 100 && <CheckCircle className="h-4 w-4 text-green-500" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {completenessPercent === 100
+                      ? "Your profile is fully optimised — homeowners can find everything they need to hire you."
+                      : `A complete profile gets up to 4× more views. ${completenessItems.length - completedCount} item${completenessItems.length - completedCount !== 1 ? "s" : ""} left.`}
+                  </p>
+                  {/* Checklist with per-item action links */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                    {completenessItems.map(({ label, done }) => (
+                      <div key={label} className={`flex items-center gap-1.5 text-xs group ${done ? "text-green-700" : tier.color}`}>
+                        {done
+                          ? <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                          : <div className={`h-3 w-3 rounded-full border-2 flex-shrink-0 ${tier.color.replace("text-", "border-")}`} />
+                        }
+                        {done ? (
+                          <span className="opacity-50 line-through">{label}</span>
+                        ) : (
+                          <Link href={PROFILE_ACTIONS[label] ?? `/contractors/${CONTRACTOR_ID}`}>
+                            <span className="underline underline-offset-2 decoration-dashed hover:no-underline cursor-pointer">{label}</span>
+                          </Link>
+                        )}
+                        {!done && (
+                          <Link href={PROFILE_ACTIONS[label] ?? `/contractors/${CONTRACTOR_ID}`}>
+                            <span className="ml-auto text-[9px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Add →</span>
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button asChild variant="outline" size="sm" className={`flex-shrink-0 border-current ${tier.color} hover:bg-current/10 hidden sm:flex`}>
+                  <Link href={`/contractors/${CONTRACTOR_ID}`}>Edit Profile</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Main tab area */}
       <Tabs defaultValue="matches" className="mb-6">
