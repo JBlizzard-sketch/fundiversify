@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useSearch } from "wouter";
-import { ShieldCheck, Star, MapPin, Search, SlidersHorizontal, Zap, Droplets, Paintbrush, Hammer, Layers, HardHat, Wind, Flame, Wrench, Briefcase, Clock, ChevronRight } from "lucide-react";
+import { ShieldCheck, Star, MapPin, Search, SlidersHorizontal, Zap, Droplets, Paintbrush, Hammer, Layers, HardHat, Wind, Flame, Wrench, Briefcase, Clock, ChevronRight, Map, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -42,11 +42,154 @@ const MIN_RATING_OPTIONS = [
   { value: "4.5", label: "4.5+ stars" },
 ];
 
+// Nairobi neighbourhood positions (cx/cy as % of 400x340 SVG viewport)
+const NAIROBI_HOODS: { name: string; cx: number; cy: number }[] = [
+  { name: "Westlands",  cx: 140, cy: 120 },
+  { name: "Parklands",  cx: 160, cy: 90  },
+  { name: "Kilimani",   cx: 155, cy: 165 },
+  { name: "Lavington",  cx: 120, cy: 185 },
+  { name: "Karen",      cx: 100, cy: 240 },
+  { name: "Langata",    cx: 140, cy: 265 },
+  { name: "South B",    cx: 205, cy: 250 },
+  { name: "Eastleigh",  cx: 250, cy: 130 },
+  { name: "Kasarani",   cx: 280, cy: 75  },
+  { name: "Ruaka",      cx: 100, cy: 60  },
+];
+
+function ContractorMapView({ contractors, onSelect }: { contractors: any[]; onSelect: (id: number) => void }) {
+  const [hoveredHood, setHoveredHood] = useState<string | null>(null);
+
+  const byHood = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    contractors.forEach((c) => {
+      const loc = c.location;
+      if (!map[loc]) map[loc] = [];
+      map[loc].push(c);
+    });
+    return map;
+  }, [contractors]);
+
+  const maxCount = Math.max(...Object.values(byHood).map((v) => v.length), 1);
+
+  return (
+    <div className="relative">
+      <div className="rounded-xl border bg-gradient-to-br from-green-50/60 to-blue-50/40 overflow-hidden">
+        <svg viewBox="0 0 400 320" className="w-full" style={{ maxHeight: 420 }}>
+          {/* Road network suggestion lines */}
+          <line x1="100" y1="60" x2="280" y2="75"  stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="160" y1="90" x2="250" y2="130" stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="140" y1="120" x2="205" y2="250" stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="155" y1="165" x2="140" y2="265" stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="120" y1="185" x2="100" y2="240" stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="205" y1="250" x2="140" y2="265" stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+          <line x1="250" y1="130" x2="280" y2="75"  stroke="#e5e7eb" strokeWidth="3" strokeLinecap="round" />
+
+          {/* Neighbourhood bubbles */}
+          {NAIROBI_HOODS.map((hood) => {
+            const list = byHood[hood.name] ?? [];
+            const count = list.length;
+            const isHovered = hoveredHood === hood.name;
+            const hasContractors = count > 0;
+            const radius = hasContractors ? 18 + Math.round((count / maxCount) * 14) : 14;
+            const topRating = hasContractors ? Math.max(...list.map((c) => c.rating)) : 0;
+
+            return (
+              <g
+                key={hood.name}
+                className="cursor-pointer"
+                onMouseEnter={() => setHoveredHood(hood.name)}
+                onMouseLeave={() => setHoveredHood(null)}
+              >
+                {/* Pulse ring for hovered */}
+                {isHovered && hasContractors && (
+                  <circle cx={hood.cx} cy={hood.cy} r={radius + 8} fill="none" stroke="#6366f1" strokeWidth="2" opacity="0.4" />
+                )}
+                {/* Main bubble */}
+                <circle
+                  cx={hood.cx}
+                  cy={hood.cy}
+                  r={radius}
+                  fill={hasContractors ? (isHovered ? "#6366f1" : "#818cf8") : "#e5e7eb"}
+                  stroke={hasContractors ? (isHovered ? "#4338ca" : "#6366f1") : "#d1d5db"}
+                  strokeWidth="2"
+                  opacity={hasContractors ? 0.95 : 0.5}
+                />
+                {/* Count label */}
+                {hasContractors && (
+                  <text x={hood.cx} y={hood.cy + 1} textAnchor="middle" dominantBaseline="middle"
+                    fontSize="11" fontWeight="700" fill="white">
+                    {count}
+                  </text>
+                )}
+                {/* Neighbourhood name */}
+                <text x={hood.cx} y={hood.cy + radius + 13} textAnchor="middle" dominantBaseline="middle"
+                  fontSize="9.5" fontWeight="600" fill={hasContractors ? "#374151" : "#9ca3af"}>
+                  {hood.name}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Legend */}
+          <rect x="8" y="8" width="120" height="38" rx="6" fill="white" opacity="0.9" />
+          <circle cx="22" cy="22" r="7" fill="#818cf8" />
+          <text x="34" y="22" dominantBaseline="middle" fontSize="9" fill="#374151" fontWeight="600">Bubble = # of pros</text>
+          <text x="14" y="38" dominantBaseline="middle" fontSize="8" fill="#9ca3af">Larger = more contractors</text>
+        </svg>
+      </div>
+
+      {/* Tooltip panel for hovered neighbourhood */}
+      {hoveredHood && byHood[hoveredHood] && byHood[hoveredHood].length > 0 && (
+        <div className="mt-3 p-4 rounded-xl border bg-background shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              {hoveredHood} — {byHood[hoveredHood].length} pro{byHood[hoveredHood].length !== 1 ? "s" : ""}
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {byHood[hoveredHood].slice(0, 4).map((c: any) => (
+              <Link key={c.id} href={`/contractors/${c.id}`}>
+                <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                    {c.name.slice(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.trade} · {c.jobsCompleted} jobs</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs flex-shrink-0">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="font-medium">{c.rating.toFixed(1)}</span>
+                  </div>
+                  {c.verificationStatus === "verified" && (
+                    <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                  )}
+                </div>
+              </Link>
+            ))}
+            {byHood[hoveredHood].length > 4 && (
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                +{byHood[hoveredHood].length - 4} more in {hoveredHood}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!hoveredHood && (
+        <p className="mt-3 text-xs text-muted-foreground text-center">Hover a bubble to see contractors in that neighbourhood</p>
+      )}
+    </div>
+  );
+}
+
 export default function ContractorsPage() {
   usePageMeta("Find a Pro", "Browse verified plumbers, electricians, painters and more in Nairobi. Read real reviews and get instant quotes.");
   const rawSearch = useSearch();
   const params = new URLSearchParams(rawSearch);
 
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [trade, setTrade] = useState(() => {
     const t = params.get("trade");
@@ -205,10 +348,32 @@ export default function ContractorsPage() {
         )}
       </div>
 
-      <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span>{isLoading ? "Loading…" : `${sorted.length} contractors found`}</span>
-        <span className="text-xs">{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <span className="text-sm text-muted-foreground">{isLoading ? "Loading…" : `${sorted.length} contractors found`}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:inline">{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
+          {/* List / Map toggle */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === "list" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <List className="h-3.5 w-3.5" />List
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === "map" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Map className="h-3.5 w-3.5" />Map
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Map view */}
+      {viewMode === "map" && !isLoading && (
+        <ContractorMapView contractors={sorted} onSelect={(id) => {}} />
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -216,7 +381,7 @@ export default function ContractorsPage() {
             <Card key={i}><CardContent className="p-6"><Skeleton className="h-48 w-full rounded-lg" /></CardContent></Card>
           ))}
         </div>
-      ) : (
+      ) : viewMode === "list" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sorted.map((c) => {
             const TradeIcon = TRADE_ICONS[c.trade] ?? TRADE_ICONS.default;
@@ -302,7 +467,7 @@ export default function ContractorsPage() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

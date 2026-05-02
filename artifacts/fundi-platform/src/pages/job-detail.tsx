@@ -665,6 +665,20 @@ export default function JobDetailPage() {
         const canAccept = job.status === "open" || job.status === "quoted";
         const lowestPrice = quotes.length > 1 ? Math.min(...quotes.map((q: any) => q.amount)) : null;
         const highestRating = quotes.length > 1 ? Math.max(...quotes.map((q: any) => q.contractorRating)) : null;
+        const maxAmount = quotes.length > 0 ? Math.max(...quotes.map((q: any) => q.amount)) : 1;
+        const maxJobs = quotes.length > 0 ? Math.max(...quotes.map((q: any) => q.contractorJobsCompleted ?? 0), 1) : 1;
+
+        // FundiScore: price 40% + rating 40% + verified 10% + jobs 10%
+        const fundiScores: Record<number, number> = {};
+        quotes.forEach((q: any) => {
+          const priceScore  = maxAmount > lowestPrice! ? 1 - (q.amount - (lowestPrice ?? q.amount)) / (maxAmount - (lowestPrice ?? q.amount) + 1) : 1;
+          const ratingScore = q.contractorRating / 5;
+          const verifyScore = q.contractorVerified ? 1 : 0;
+          const jobsScore   = Math.min((q.contractorJobsCompleted ?? 0) / Math.max(maxJobs, 1), 1);
+          fundiScores[q.id] = Math.round(priceScore * 40 + ratingScore * 40 + verifyScore * 10 + jobsScore * 10);
+        });
+        const topFundiId = quotes.length > 1 ? Object.entries(fundiScores).sort((a, b) => +b[1] - +a[1])[0]?.[0] : null;
+
         const bestValue = quotes.length > 1
           ? quotes.reduce((best: any, q: any) => {
               const score = (q.contractorRating / 5) * 0.6 + (1 - q.amount / Math.max(...quotes.map((x: any) => x.amount))) * 0.4;
@@ -796,6 +810,11 @@ export default function JobDetailPage() {
                                 <span className="font-medium text-sm">{quote.contractorName}</span>
                                 {quote.contractorTier === "pro" && <Badge className="text-xs py-0">Pro</Badge>}
                                 {isBestValue && <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5"><Trophy className="h-3 w-3" />Best value</span>}
+                                {String(quote.id) === topFundiId && !isBestValue && (
+                                  <span className="text-xs bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5">
+                                    <Zap className="h-3 w-3" />Top FundiScore
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                                 <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{quote.contractorRating.toFixed(1)}</span>
@@ -815,6 +834,26 @@ export default function JobDetailPage() {
                             ) : null}
                           </div>
                         </div>
+
+                        {/* FundiScore bar */}
+                        {quotes.length > 1 && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">FundiScore™</span>
+                              <span className={`text-xs font-bold ${fundiScores[quote.id] >= 80 ? "text-green-600" : fundiScores[quote.id] >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
+                                {fundiScores[quote.id]}/100
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${fundiScores[quote.id] >= 80 ? "bg-green-500" : fundiScores[quote.id] >= 60 ? "bg-amber-500" : "bg-muted-foreground/40"}`}
+                                style={{ width: `${fundiScores[quote.id]}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1">Price 40% · Rating 40% · Verified 10% · Experience 10%</p>
+                          </div>
+                        )}
+
                         {quote.message && <p className="text-sm text-muted-foreground mt-3 pt-3 border-t leading-relaxed">{quote.message}</p>}
                       </div>
                     );
