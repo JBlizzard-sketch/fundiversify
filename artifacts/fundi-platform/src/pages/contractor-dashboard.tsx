@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
-import { Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X, Zap, ShieldCheck, TrendingUp, MapPin, Clock, Sparkles } from "lucide-react";
+import { Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X, Zap, ShieldCheck, TrendingUp, MapPin, Clock, Sparkles, AlertCircle } from "lucide-react";
+import { AvailabilityWidget } from "@/components/availability-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,18 @@ export default function ContractorDashboard() {
   });
 
   const isPro = contractor?.subscriptionTier === "pro";
+
+  const completenessItems = [
+    { label: "Profile photo", done: !!contractor?.photoUrl },
+    { label: "Bio written", done: !!(contractor?.bio && contractor.bio.length > 20) },
+    { label: "Phone number", done: !!contractor?.phone },
+    { label: "Specializations added", done: !!(contractor?.specializations && contractor.specializations.length > 0) },
+    { label: "Years experience", done: !!(contractor?.yearsExperience && contractor.yearsExperience > 0) },
+    { label: "ID document uploaded", done: !!contractor?.idDocUrl },
+    { label: "Business permit uploaded", done: !!contractor?.businessPermitUrl },
+  ];
+  const completedCount = completenessItems.filter((i) => i.done).length;
+  const completenessPercent = Math.round((completedCount / completenessItems.length) * 100);
 
   const statCards = [
     { label: "Total Earnings", value: data ? `KES ${data.totalEarnings.toLocaleString()}` : "—", icon: DollarSign, sub: `KES ${data?.thisMonthEarnings?.toLocaleString() ?? 0} this month` },
@@ -159,6 +172,59 @@ export default function ContractorDashboard() {
             <div>
               <p className="font-medium text-sm">You're a Pro Member</p>
               <p className="text-xs text-muted-foreground">Enjoying priority placement, verified badge, and unlimited leads.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Profile Completeness Meter */}
+      {contractor && completenessPercent < 100 && (
+        <Card className="mb-6 border-blue-200 bg-blue-50/40">
+          <CardContent className="p-5">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  <span className="font-semibold text-sm text-blue-800">Complete your profile — {completenessPercent}% done</span>
+                </div>
+                <p className="text-xs text-blue-700/80 mb-3">
+                  A complete profile gets up to 4× more views. {completenessItems.length - completedCount} item{completenessItems.length - completedCount !== 1 ? "s" : ""} left.
+                </p>
+                {/* Progress bar */}
+                <div className="h-2 w-full rounded-full bg-blue-100 overflow-hidden mb-4">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${completenessPercent}%` }}
+                  />
+                </div>
+                {/* Checklist */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {completenessItems.map(({ label, done }) => (
+                    <div key={label} className={`flex items-center gap-2 text-xs ${done ? "text-green-700" : "text-blue-700"}`}>
+                      {done
+                        ? <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                        : <div className="h-3.5 w-3.5 rounded-full border-2 border-blue-400 flex-shrink-0" />
+                      }
+                      <span className={done ? "line-through opacity-60" : ""}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Button asChild variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100 flex-shrink-0">
+                <Link href={`/contractors/${CONTRACTOR_ID}`}>Edit Profile</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {contractor && completenessPercent === 100 && (
+        <Card className="mb-6 border-green-200 bg-green-50/40">
+          <CardContent className="p-4 flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-sm text-green-800">Profile 100% complete!</p>
+              <p className="text-xs text-green-700/80">Your profile is fully set up. Homeowners can find everything they need to hire you.</p>
             </div>
           </CardContent>
         </Card>
@@ -343,6 +409,12 @@ export default function ContractorDashboard() {
         {/* Performance */}
         <TabsContent value="performance">
           <div className="space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Your Availability This Week</CardTitle></CardHeader>
+              <CardContent>
+                <AvailabilityWidget />
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader><CardTitle>Earnings — Last 6 Months</CardTitle></CardHeader>
               <CardContent>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link, useSearch } from "wouter";
-import { ShieldCheck, Star, MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { ShieldCheck, Star, MapPin, Search, SlidersHorizontal, Zap, Droplets, Paintbrush, Hammer, Layers, HardHat, Wind, Flame, Wrench, Briefcase, Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,34 @@ import { useListContractors } from "@workspace/api-client-react";
 
 const TRADES = ["All Trades", "Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
 const LOCATIONS = ["All Locations", "Westlands", "Kilimani", "Karen", "Kasarani", "Parklands", "Lavington", "Eastleigh", "South B", "Langata", "Ruaka"];
+
+const TRADE_ICONS: Record<string, React.ElementType> = {
+  Plumbing: Droplets,
+  Electrical: Zap,
+  Painting: Paintbrush,
+  Carpentry: Hammer,
+  Tiling: Layers,
+  Roofing: HardHat,
+  Masonry: HardHat,
+  HVAC: Wind,
+  Welding: Flame,
+  Fundi: Wrench,
+  default: Briefcase,
+};
+
+const SORT_OPTIONS = [
+  { value: "rating", label: "Top Rated" },
+  { value: "jobs", label: "Most Jobs" },
+  { value: "newest", label: "Newest" },
+  { value: "response", label: "Fastest Response" },
+];
+
+const MIN_RATING_OPTIONS = [
+  { value: "0", label: "Any rating" },
+  { value: "3", label: "3+ stars" },
+  { value: "4", label: "4+ stars" },
+  { value: "4.5", label: "4.5+ stars" },
+];
 
 export default function ContractorsPage() {
   const rawSearch = useSearch();
@@ -28,6 +56,8 @@ export default function ContractorsPage() {
   });
   const [tier, setTier] = useState("all");
   const [verified, setVerified] = useState("all");
+  const [sortBy, setSortBy] = useState("rating");
+  const [minRating, setMinRating] = useState("0");
 
   const { data, isLoading } = useListContractors({
     search: search || undefined,
@@ -35,15 +65,37 @@ export default function ContractorsPage() {
     location: location === "All Locations" ? undefined : location,
     tier: (tier === "pro" || tier === "free") ? tier : undefined,
     verified: verified === "verified" ? true : undefined,
-    limit: 24,
+    limit: 48,
   });
+
+  const sorted = useMemo(() => {
+    if (!data?.contractors) return [];
+    let list = [...data.contractors];
+    if (minRating !== "0") {
+      const min = parseFloat(minRating);
+      list = list.filter((c) => c.rating >= min);
+    }
+    switch (sortBy) {
+      case "rating": return list.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+      case "jobs": return list.sort((a, b) => b.jobsCompleted - a.jobsCompleted);
+      case "newest": return list.sort((a, b) => b.id - a.id);
+      case "response": return list.sort((a, b) => a.id - b.id);
+      default: return list;
+    }
+  }, [data, sortBy, minRating]);
 
   const activeFilters = [
     trade !== "All Trades" && trade,
     location !== "All Locations" && location,
     tier !== "all" && (tier === "pro" ? "Pro Members" : "Free Listing"),
     verified !== "all" && "Verified Only",
+    minRating !== "0" && `${minRating}+ stars`,
   ].filter(Boolean) as string[];
+
+  const clearAll = () => {
+    setSearch(""); setTrade("All Trades"); setLocation("All Locations");
+    setTier("all"); setVerified("all"); setMinRating("0");
+  };
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -52,147 +104,198 @@ export default function ContractorsPage() {
         <p className="text-muted-foreground">Every pro listed here has been ID-verified, reference-checked, and portfolio-reviewed.</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 mb-8 p-4 bg-card border rounded-xl">
+      {/* Trade category chips */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        {TRADES.slice(1).map((t) => {
+          const Icon = TRADE_ICONS[t] ?? TRADE_ICONS.default;
+          const active = trade === t;
+          return (
+            <button
+              key={t}
+              onClick={() => setTrade(active ? "All Trades" : t)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary/50 hover:bg-primary/5 text-foreground"}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {t}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filter panel */}
+      <div className="flex flex-col gap-4 mb-6 p-4 bg-card border rounded-xl">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search name, trade, bio…"
+              placeholder="Search name, bio, specialization…"
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={trade} onValueChange={setTrade}>
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Trade" />
-            </SelectTrigger>
-            <SelectContent>
-              {TRADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-            </SelectContent>
-          </Select>
           <Select value={location} onValueChange={setLocation}>
             <SelectTrigger className="w-full sm:w-44">
+              <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
               <SelectValue placeholder="Location" />
             </SelectTrigger>
             <SelectContent>
               {LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground mr-1">Tier:</span>
+          <SlidersHorizontal className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground">Tier:</span>
           {["all", "pro", "free"].map(t => (
-            <Button key={t} variant={tier === t ? "default" : "outline"} size="sm" onClick={() => setTier(t)}>
+            <button
+              key={t}
+              onClick={() => setTier(t)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${tier === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50 text-foreground"}`}
+            >
               {t === "all" ? "All" : t === "pro" ? "Pro Members" : "Free Listing"}
-            </Button>
+            </button>
           ))}
-          <div className="w-px h-6 bg-border mx-1" />
-          <span className="text-sm text-muted-foreground mr-1">Status:</span>
-          {["all", "verified"].map(v => (
-            <Button key={v} variant={verified === v ? "default" : "outline"} size="sm" onClick={() => setVerified(v)}>
-              {v === "all" ? "All" : "✓ Verified Only"}
-            </Button>
+
+          <div className="w-px h-5 bg-border mx-1" />
+          <span className="text-sm text-muted-foreground">Min rating:</span>
+          {MIN_RATING_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => setMinRating(o.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${minRating === o.value ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50 text-foreground"}`}
+            >
+              {o.label}
+            </button>
           ))}
+
+          <div className="w-px h-5 bg-border mx-1" />
+          <button
+            onClick={() => setVerified(verified === "verified" ? "all" : "verified")}
+            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${verified === "verified" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50 text-foreground"}`}
+          >
+            <ShieldCheck className="h-3 w-3" />
+            Verified Only
+          </button>
+
           {activeFilters.length > 0 && (
-            <>
-              <div className="w-px h-6 bg-border mx-1" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={() => { setSearch(""); setTrade("All Trades"); setLocation("All Locations"); setTier("all"); setVerified("all"); }}
-              >
-                Clear all
-              </Button>
-            </>
+            <button onClick={clearAll} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1">
+              Clear all
+            </button>
           )}
         </div>
 
         {activeFilters.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             {activeFilters.map((f) => (
-              <Badge key={f} variant="secondary">{f}</Badge>
+              <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
             ))}
           </div>
         )}
       </div>
 
       <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-        <span>{isLoading ? "Loading…" : `${data?.total ?? 0} contractors found`}</span>
+        <span>{isLoading ? "Loading…" : `${sorted.length} contractors found`}</span>
+        <span className="text-xs">{SORT_OPTIONS.find(o => o.value === sortBy)?.label}</span>
       </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}><CardContent className="p-6"><Skeleton className="h-40 w-full rounded-lg" /></CardContent></Card>
+            <Card key={i}><CardContent className="p-6"><Skeleton className="h-48 w-full rounded-lg" /></CardContent></Card>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.contractors.map((c) => (
-            <Link key={c.id} href={`/contractors/${c.id}`}>
-              <Card className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group h-full">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar className="h-14 w-14 border-2 border-border flex-shrink-0">
-                      <AvatarImage src={c.avatarUrl ?? ""} alt={c.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                        {c.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-base truncate">{c.name}</h3>
+          {sorted.map((c) => {
+            const TradeIcon = TRADE_ICONS[c.trade] ?? TRADE_ICONS.default;
+            return (
+              <Link key={c.id} href={`/contractors/${c.id}`}>
+                <Card className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group h-full">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-14 w-14 border-2 border-border">
+                          <AvatarImage src={c.avatarUrl ?? ""} alt={c.name} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                            {c.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
                         {c.verificationStatus === "verified" && (
-                          <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" title="Verified Pro" />
-                        )}
-                        {c.subscriptionTier === "pro" && (
-                          <Badge className="text-xs py-0 px-1.5">Pro</Badge>
+                          <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center border-2 border-background">
+                            <ShieldCheck className="h-2.5 w-2.5 text-primary-foreground" />
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{c.trade}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                          <h3 className="font-semibold text-sm truncate">{c.name}</h3>
+                          {c.subscriptionTier === "pro" && (
+                            <Badge className="text-[10px] py-0 px-1.5 h-4">Pro</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-primary font-medium mb-1">
+                          <TradeIcon className="h-3 w-3" />
+                          {c.trade}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{c.location}</span>
+                          <span className="flex items-center gap-0.5">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            <span className="text-foreground font-medium">{c.rating.toFixed(1)}</span>
+                            <span>({c.reviewCount})</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />{c.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <span className="text-foreground font-medium">{c.rating.toFixed(1)}</span>
-                      <span>({c.reviewCount})</span>
-                    </span>
-                  </div>
+                    {c.bio && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">{c.bio}</p>
+                    )}
 
-                  {c.bio && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{c.bio}</p>
-                  )}
+                    {c.specializations && c.specializations.length > 0 && (
+                      <div className="flex gap-1.5 flex-wrap mb-3">
+                        {c.specializations.slice(0, 3).map((s: string) => (
+                          <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/8 text-primary border border-primary/15">
+                            <TradeIcon className="h-2.5 w-2.5" />
+                            {s}
+                          </span>
+                        ))}
+                        {c.specializations.length > 3 && (
+                          <span className="text-[10px] text-muted-foreground self-center">+{c.specializations.length - 3} more</span>
+                        )}
+                      </div>
+                    )}
 
-                  <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{c.jobsCompleted} jobs completed</span>
-                    <span>{c.yearsExperience ?? 0} yrs experience</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    <div className="pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{c.jobsCompleted} jobs</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-green-500" />~2h response</span>
+                      <span className="flex items-center gap-1 text-primary font-medium group-hover:gap-2 transition-all">
+                        View <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
 
-          {!isLoading && data?.contractors.length === 0 && (
+          {!isLoading && sorted.length === 0 && (
             <div className="col-span-3 text-center py-20 text-muted-foreground">
               <ShieldCheck className="h-12 w-12 mx-auto mb-4 opacity-20" />
               <p className="text-lg font-medium">No contractors found</p>
-              <p className="text-sm mt-1">Try adjusting your filters</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => { setSearch(""); setTrade("All Trades"); setLocation("All Locations"); setTier("all"); setVerified("all"); }}
-              >
-                Clear filters
+              <p className="text-sm mt-1">Try adjusting your filters or rating threshold</p>
+              <Button variant="outline" className="mt-4" onClick={clearAll}>
+                Clear all filters
               </Button>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare, AlertTriangle, X, ShieldAlert, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
   useConfirmJob,
   useGetJobReview,
   useCreateReview,
+  useCreateDispute,
   getGetJobQueryKey,
   getGetJobMessagesQueryKey,
   getGetJobReviewQueryKey,
@@ -25,6 +26,21 @@ import {
 const CONTRACTOR_ID = 2;
 const HOMEOWNER_ID = 1;
 const HOMEOWNER_NAME = "Alice Wanjiku";
+
+const DISPUTE_REASONS = [
+  { value: "payment_dispute", label: "Payment dispute" },
+  { value: "work_quality", label: "Work quality not acceptable" },
+  { value: "no_show", label: "Contractor did not show up" },
+  { value: "incomplete_work", label: "Work left incomplete" },
+  { value: "property_damage", label: "Property damaged during work" },
+  { value: "other", label: "Other" },
+];
+
+const DISPUTE_STATUS_STEPS = [
+  { key: "open", label: "Dispute Raised", desc: "Under initial review by FundiVerify" },
+  { key: "under_review", label: "Under Review", desc: "Our mediation team is investigating" },
+  { key: "resolved", label: "Resolved", desc: "Dispute has been closed" },
+];
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -39,12 +55,178 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
           onMouseLeave={() => setHover(0)}
           className="transition-transform hover:scale-110"
         >
-          <Star
-            className={`h-8 w-8 ${i <= (hover || value) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
-          />
+          <Star className={`h-8 w-8 ${i <= (hover || value) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
         </button>
       ))}
     </div>
+  );
+}
+
+function DisputeModal({
+  jobId,
+  jobTitle,
+  onClose,
+}: { jobId: number; jobTitle: string; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [reason, setReason] = useState("");
+  const [description, setDescription] = useState("");
+  const [raisedByRole, setRaisedByRole] = useState<"homeowner" | "contractor">("homeowner");
+
+  const createDispute = useCreateDispute({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetJobQueryKey(jobId) });
+        onClose();
+      },
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-5 border-b">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-red-500" />
+            <h2 className="font-semibold">Raise a Dispute</h2>
+          </div>
+          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+            Filing a dispute for: <span className="font-medium text-foreground">{jobTitle}</span>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">I am raising this as</label>
+            <div className="flex gap-2">
+              {(["homeowner", "contractor"] as const).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setRaisedByRole(role)}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium capitalize transition-colors ${raisedByRole === role ? "border-primary bg-primary/5 text-primary" : "border-border hover:bg-muted"}`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Reason *</label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Select a reason...</option>
+              {DISPUTE_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Description *</label>
+            <textarea
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              rows={4}
+              placeholder="Describe what happened in detail. Include dates, amounts, and any evidence you have..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-amber-50 border border-amber-200 p-3 rounded-lg">
+            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <span>Raising a dispute will pause the job and notify both parties. Our mediation team reviews disputes within 24–48 hours.</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-5 border-t">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button
+            variant="destructive"
+            className="flex-1"
+            disabled={!reason || !description.trim() || createDispute.isPending}
+            onClick={() => {
+              const name = raisedByRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor";
+              const id = raisedByRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID;
+              createDispute.mutate({
+                data: {
+                  jobId,
+                  raisedById: id,
+                  raisedByName: name,
+                  reason,
+                  description: description.trim(),
+                },
+              });
+            }}
+          >
+            {createDispute.isPending ? "Submitting..." : "Submit Dispute"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DisputeTimeline({ dispute }: { dispute: { status: string; reason: string; description?: string | null; resolution?: string | null; raisedByName: string; createdAt: string } }) {
+  const currentStep = DISPUTE_STATUS_STEPS.findIndex((s) => s.key === dispute.status);
+  const isResolved = dispute.status === "resolved";
+
+  return (
+    <Card className="mb-6 border-red-200">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-red-700">
+          <ShieldAlert className="h-4 w-4" />
+          Active Dispute
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Raised by <span className="font-medium">{dispute.raisedByName}</span> · {new Date(dispute.createdAt).toLocaleDateString("en-KE")}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="p-3 rounded-lg bg-muted/50 text-sm">
+          <p className="font-medium capitalize mb-0.5">{dispute.reason.replace(/_/g, " ")}</p>
+          {dispute.description && <p className="text-muted-foreground">{dispute.description}</p>}
+        </div>
+
+        {/* Status timeline */}
+        <div className="space-y-0">
+          {DISPUTE_STATUS_STEPS.map((step, i) => {
+            const isActive = i === currentStep;
+            const isDone = i < currentStep || isResolved;
+            const isFuture = i > currentStep && !isResolved;
+            return (
+              <div key={step.key} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold border-2 transition-colors ${isDone ? "bg-green-500 border-green-500 text-white" : isActive ? "bg-red-500 border-red-500 text-white animate-pulse" : "bg-background border-muted-foreground/30 text-muted-foreground"}`}>
+                    {isDone ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                  </div>
+                  {i < DISPUTE_STATUS_STEPS.length - 1 && (
+                    <div className={`w-0.5 h-6 mt-0.5 ${isDone ? "bg-green-500" : "bg-muted"}`} />
+                  )}
+                </div>
+                <div className="pb-4">
+                  <p className={`text-sm font-medium leading-tight ${isFuture ? "text-muted-foreground/50" : ""}`}>{step.label}</p>
+                  <p className={`text-xs mt-0.5 ${isFuture ? "text-muted-foreground/40" : "text-muted-foreground"}`}>{step.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {dispute.resolution && (
+          <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm">
+            <p className="font-medium text-green-800 mb-1">Resolution</p>
+            <p className="text-green-700">{dispute.resolution}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -59,6 +241,7 @@ export default function JobDetailPage() {
   const [activeRole, setActiveRole] = useState<"homeowner" | "contractor">("homeowner");
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: job, isLoading } = useGetJob(id, {
@@ -141,12 +324,28 @@ export default function JobDetailPage() {
 
   const canConfirmAsHomeowner = job.status === "in_progress" && !job.homeownerConfirmed;
   const canConfirmAsContractor = job.status === "in_progress" && !job.contractorConfirmed;
+  const acceptedQuote = job.quotes?.find((q: { status: string }) => q.status === "accepted");
+  const canRaiseDispute = (job.status === "in_progress" || job.status === "quoted") && !job.dispute;
 
-  // Find accepted quote to get contractor info
-  const acceptedQuote = job.quotes?.find((q) => q.status === "accepted");
+  const statusColor: Record<string, string> = {
+    open: "bg-blue-50 text-blue-700 border-blue-200",
+    quoted: "bg-amber-50 text-amber-700 border-amber-200",
+    in_progress: "bg-violet-50 text-violet-700 border-violet-200",
+    completed: "bg-green-50 text-green-700 border-green-200",
+    disputed: "bg-red-50 text-red-700 border-red-200",
+    cancelled: "bg-muted text-muted-foreground border-border",
+  };
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
+      {showDisputeModal && (
+        <DisputeModal
+          jobId={id}
+          jobTitle={job.title}
+          onClose={() => setShowDisputeModal(false)}
+        />
+      )}
+
       <Button variant="ghost" asChild className="mb-6 -ml-2">
         <Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-2" />Back to Jobs</Link>
       </Button>
@@ -163,9 +362,9 @@ export default function JobDetailPage() {
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{new Date(job.createdAt).toLocaleDateString("en-KE")}</span>
               </div>
             </div>
-            <Badge variant={job.status === "open" ? "default" : "secondary"} className="capitalize">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize flex-shrink-0 ${statusColor[job.status] ?? "bg-muted text-muted-foreground"}`}>
               {job.status.replace("_", " ")}
-            </Badge>
+            </span>
           </div>
 
           <p className="text-muted-foreground leading-relaxed mb-4">{job.description}</p>
@@ -186,10 +385,28 @@ export default function JobDetailPage() {
               <p className="font-semibold">{job.homeownerName}</p>
             </div>
           </div>
+
+          {canRaiseDispute && (
+            <div className="mt-4 pt-4 border-t flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Having a problem with this job?</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                onClick={() => setShowDisputeModal(true)}
+              >
+                <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                Raise a Dispute
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Leave a Review — shown when job is completed and no review submitted yet */}
+      {/* Dispute timeline */}
+      {job.dispute && <DisputeTimeline dispute={job.dispute as any} />}
+
+      {/* Leave a Review */}
       {job.status === "completed" && !existingReview && (
         <Card className="mb-6 border-amber-200 bg-amber-50/50">
           <CardHeader className="pb-3">
@@ -235,7 +452,6 @@ export default function JobDetailPage() {
         </Card>
       )}
 
-      {/* Review submitted confirmation */}
       {job.status === "completed" && existingReview && (
         <Card className="mb-6 border-green-200 bg-green-50/50">
           <CardContent className="p-4 flex items-start gap-3">
@@ -273,7 +489,7 @@ export default function JobDetailPage() {
                 Contractor {job.contractorConfirmed ? "confirmed" : "pending"}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Both parties must confirm for the job to be marked complete and reviews to open.</p>
+            <p className="text-xs text-muted-foreground">Both parties must confirm for the job to be marked complete.</p>
             <div className="flex gap-2 flex-wrap">
               {canConfirmAsHomeowner && (
                 <Button size="sm" onClick={() => confirmJob.mutate({ id, data: { role: "homeowner" } })} disabled={confirmJob.isPending}>
@@ -348,34 +564,11 @@ export default function JobDetailPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && msgText.trim()) {
                     e.preventDefault();
-                    sendMessage.mutate({
-                      id,
-                      data: {
-                        senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID,
-                        senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor",
-                        senderRole: activeRole,
-                        content: msgText.trim(),
-                      },
-                    });
+                    sendMessage.mutate({ id, data: { senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID, senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor", senderRole: activeRole, content: msgText.trim() } });
                   }
                 }}
               />
-              <Button
-                size="icon"
-                disabled={!msgText.trim() || sendMessage.isPending}
-                onClick={() => {
-                  if (!msgText.trim()) return;
-                  sendMessage.mutate({
-                    id,
-                    data: {
-                      senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID,
-                      senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor",
-                      senderRole: activeRole,
-                      content: msgText.trim(),
-                    },
-                  });
-                }}
-              >
+              <Button size="icon" disabled={!msgText.trim() || sendMessage.isPending} onClick={() => { if (!msgText.trim()) return; sendMessage.mutate({ id, data: { senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID, senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor", senderRole: activeRole, content: msgText.trim() } }); }}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -389,7 +582,7 @@ export default function JobDetailPage() {
           <CardTitle>Quotes ({job.quotes?.length ?? 0})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {job.quotes && job.quotes.length > 0 ? job.quotes.map((quote) => (
+          {job.quotes && job.quotes.length > 0 ? job.quotes.map((quote: any) => (
             <div key={quote.id} className={`p-4 rounded-lg border ${quote.status === "accepted" ? "border-primary bg-primary/5" : "bg-muted/30"}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -412,7 +605,7 @@ export default function JobDetailPage() {
                   <p className="font-bold text-lg">KES {quote.amount.toLocaleString()}</p>
                   {quote.status === "accepted" ? (
                     <span className="text-xs text-primary font-medium flex items-center gap-1 justify-end"><CheckCircle className="h-3 w-3" />Accepted</span>
-                  ) : job.status === "open" || job.status === "quoted" ? (
+                  ) : (job.status === "open" || job.status === "quoted") ? (
                     <Button size="sm" variant="outline" className="mt-1" onClick={() => updateQuote.mutate({ id: quote.id, data: { status: "accepted" } })} disabled={updateQuote.isPending}>
                       Accept Quote
                     </Button>

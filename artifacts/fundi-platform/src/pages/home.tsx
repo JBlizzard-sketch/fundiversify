@@ -5,6 +5,7 @@ import {
   CheckCircle2, Users, Briefcase, MessageSquare,
 } from "lucide-react";
 import { Link } from "wouter";
+import { OnboardingModal } from "@/components/onboarding-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col w-full">
+      <OnboardingModal />
       {/* Hero */}
       <section className="relative w-full bg-gradient-to-b from-primary/5 to-background py-24 md:py-32 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.08),transparent_50%)] -z-10" />
@@ -170,7 +172,7 @@ export default function Home() {
             ? trades
             : Object.entries(TRADE_ICONS).map(([name]) => ({ name, contractorCount: 0 }))
           ).map((trade) => (
-            <Link key={trade.name} href={`/contractors?trade=${encodeURIComponent(trade.name)}`}>
+            <Link key={trade.name} href={`/hire/${encodeURIComponent(trade.name)}/all`}>
               <div className="group flex flex-col items-center gap-3 p-6 rounded-2xl border bg-card hover:border-primary/60 hover:shadow-md transition-all cursor-pointer">
                 <span className="text-3xl">{TRADE_ICONS[trade.name] ?? "🔧"}</span>
                 <div className="text-center">

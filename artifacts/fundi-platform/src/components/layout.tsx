@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/contractors", label: "Find a Pro" },
   { href: "/jobs", label: "Browse Jobs" },
   { href: "/estimate", label: "Estimator" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -259,6 +260,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <li><Link href="/apply" className="hover:text-primary transition-colors">Apply to Join</Link></li>
               <li><Link href="/jobs" className="hover:text-primary transition-colors">Browse Jobs</Link></li>
               <li><Link href="/dashboard/contractor" className="hover:text-primary transition-colors">Pro Dashboard</Link></li>
+              <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
             </ul>
           </div>
           <div>

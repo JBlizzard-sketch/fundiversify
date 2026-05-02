@@ -19,6 +19,8 @@ import ApplyPage from "@/pages/apply";
 import HomeownerDashboard from "@/pages/homeowner-dashboard";
 import ContractorDashboard from "@/pages/contractor-dashboard";
 import AdminPage from "@/pages/admin";
+import PricingPage from "@/pages/pricing";
+import TradeLandingPage from "@/pages/trade-landing";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -157,6 +159,9 @@ function Router() {
         <Route path="/apply" component={ApplyPage} />
         <Route path="/dashboard/homeowner" component={HomeownerDashboard} />
         <Route path="/dashboard/contractor" component={ContractorDashboard} />
+        <Route path="/pricing" component={PricingPage} />
+        <Route path="/hire/:trade/:location" component={TradeLandingPage} />
+        <Route path="/hire/:trade" component={TradeLandingPage} />
         <Route path="/admin" component={AdminPage} />
         <Route component={NotFound} />
       </Switch>
