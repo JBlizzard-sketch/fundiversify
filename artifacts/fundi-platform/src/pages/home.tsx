@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { StatsBanner } from "@/components/stats-bar";
+import { ReviewMarquee } from "@/components/review-marquee";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -157,6 +159,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Animated stats trust bar */}
+      <StatsBanner totalVerified={stats?.totalVerified} averageRating={stats?.averageRating} />
+
       {/* Featured Trades */}
       <section className="py-20 container px-4 md:px-6">
         <div className="flex flex-col gap-3 text-center mb-12">
@@ -266,6 +271,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Review marquee */}
+      <ReviewMarquee />
 
       {/* CTA — Contractors */}
       <section className="py-20 bg-primary text-primary-foreground">
