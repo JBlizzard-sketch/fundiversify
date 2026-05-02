@@ -323,6 +323,62 @@ export interface CreateReviewBody {
   photos?: string[];
 }
 
+export type MessageSenderRole =
+  (typeof MessageSenderRole)[keyof typeof MessageSenderRole];
+
+export const MessageSenderRole = {
+  homeowner: "homeowner",
+  contractor: "contractor",
+} as const;
+
+export interface Message {
+  id: number;
+  jobId: number;
+  senderId: number;
+  senderName: string;
+  senderRole: MessageSenderRole;
+  content: string;
+  createdAt: string;
+}
+
+export type SendMessageBodySenderRole =
+  (typeof SendMessageBodySenderRole)[keyof typeof SendMessageBodySenderRole];
+
+export const SendMessageBodySenderRole = {
+  homeowner: "homeowner",
+  contractor: "contractor",
+} as const;
+
+export interface SendMessageBody {
+  senderId: number;
+  senderName: string;
+  senderRole: SendMessageBodySenderRole;
+  content: string;
+}
+
+export type ConfirmJobBodyRole =
+  (typeof ConfirmJobBodyRole)[keyof typeof ConfirmJobBodyRole];
+
+export const ConfirmJobBodyRole = {
+  homeowner: "homeowner",
+  contractor: "contractor",
+} as const;
+
+export interface ConfirmJobBody {
+  role: ConfirmJobBodyRole;
+}
+
+export interface RequestUploadUrlBody {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+export interface RequestUploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+}
+
 export interface CreateDisputeBody {
   jobId: number;
   raisedById: number;

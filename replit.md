@@ -116,8 +116,23 @@ How it works:
 
 Run this command any time you want to sync local changes to GitHub.
 
+## Auth (Clerk)
+
+Replit-managed Clerk. Provisioned app ID: `app_3DB8XtmBY8OusZ1e4yIibA7yUpx`.
+
+Auto-provisioned secrets: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`.
+
+- Clerk proxy middleware at `/api/__clerk` (server) — `artifacts/api-server/src/middlewares/clerkProxyMiddleware.ts`
+- `@clerk/express` + `@clerk/shared` on the API server; `@clerk/react` + `@clerk/themes` on the frontend
+- Sign-in at `/sign-in`, sign-up at `/sign-up` — both use `routing="path"` with full base paths
+- Branded appearance: FundiVerify forest green palette, custom logo (`public/logo.svg`), shadcn theme, Inter font
+- Layout shows user avatar dropdown (with dashboards + sign out) when signed in, "Sign In" button when signed out
+- Vite: `tailwindcss({ optimize: false })` to prevent Clerk CSS layer reordering in prod builds
+- CSS: `@layer theme, base, clerk, components, utilities` declared before `@import "tailwindcss"` + `@import "@clerk/themes/shadcn.css"`
+
 ## Recent Improvements
 
+- Phase 2 Auth: Clerk integrated end-to-end — sign in/up pages, user menu in nav, auth-aware layout
 - Home page: functional search → navigates to `/contractors?search=...&location=...`, location chips, "How it Works" section, trust signals grid, contractor CTA
 - Contractors page: reads initial state from URL search params (compatible with home page search redirect)
 - Layout: functional mobile navigation menu with hamburger toggle, active nav highlighting, improved footer

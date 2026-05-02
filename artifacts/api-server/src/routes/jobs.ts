@@ -8,6 +8,8 @@ import {
   UpdateJobParams,
   UpdateJobBody,
   GetJobsSummaryQueryParams,
+  ConfirmJobParams,
+  ConfirmJobBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -121,6 +123,49 @@ router.patch("/jobs/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Job not found" });
     return;
   }
+
+  res.json(job);
+});
+
+router.post("/jobs/:id/confirm", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = ConfirmJobParams.safeParse({ id: parseInt(raw, 10) });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = ConfirmJobBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [current] = await db.select().from(jobsTable).where(eq(jobsTable.id, params.data.id));
+  if (!current) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  const update: Record<string, boolean | string> = {};
+  if (parsed.data.role === "homeowner") {
+    update.homeownerConfirmed = true;
+  } else {
+    update.contractorConfirmed = true;
+  }
+
+  const bothConfirmed =
+    (parsed.data.role === "homeowner" ? true : current.homeownerConfirmed) &&
+    (parsed.data.role === "contractor" ? true : current.contractorConfirmed);
+
+  if (bothConfirmed) {
+    update.status = "completed";
+  }
+
+  const [job] = await db.update(jobsTable)
+    .set(update)
+    .where(eq(jobsTable.id, params.data.id))
+    .returning();
 
   res.json(job);
 });

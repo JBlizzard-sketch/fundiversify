@@ -434,6 +434,92 @@ export const UpdateJobResponse = zod.object({
 });
 
 /**
+ * @summary Get messages for a job
+ */
+export const GetJobMessagesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetJobMessagesResponseItem = zod.object({
+  id: zod.number(),
+  jobId: zod.number(),
+  senderId: zod.number(),
+  senderName: zod.string(),
+  senderRole: zod.enum(["homeowner", "contractor"]),
+  content: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const GetJobMessagesResponse = zod.array(GetJobMessagesResponseItem);
+
+/**
+ * @summary Send a message on a job thread
+ */
+export const SendJobMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendJobMessageBody = zod.object({
+  senderId: zod.number(),
+  senderName: zod.string(),
+  senderRole: zod.enum(["homeowner", "contractor"]),
+  content: zod.string(),
+});
+
+/**
+ * @summary Confirm job completion (homeowner or contractor)
+ */
+export const ConfirmJobParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ConfirmJobBody = zod.object({
+  role: zod.enum(["homeowner", "contractor"]),
+});
+
+export const ConfirmJobResponse = zod.object({
+  id: zod.number(),
+  homeownerId: zod.number(),
+  homeownerName: zod.string().optional(),
+  title: zod.string(),
+  trade: zod.string(),
+  location: zod.string(),
+  description: zod.string(),
+  estimatedBudget: zod.number().optional(),
+  status: zod.enum([
+    "open",
+    "quoted",
+    "in_progress",
+    "completed",
+    "disputed",
+    "cancelled",
+  ]),
+  quoteCount: zod.number(),
+  urgency: zod.enum(["flexible", "within_week", "asap"]),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Request a presigned upload URL
+ */
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string(),
+  size: zod.number(),
+  contentType: zod.string(),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string(),
+  objectPath: zod.string(),
+});
+
+/**
+ * @summary Serve a stored object
+ */
+export const GetStorageObjectParams = zod.object({
+  objectPath: zod.coerce.string(),
+});
+
+/**
  * @summary Submit a quote on a job
  */
 export const CreateQuoteBody = zod.object({

@@ -28,6 +28,8 @@ tags:
     description: Dashboard and analytics
   - name: trades
     description: Trade categories
+  - name: storage
+    description: Object storage uploads and serving
 
 paths:
   /healthz:
@@ -303,6 +305,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Job"
+
+  # ── Job Messages ──
+  /jobs/{id}/messages:
+    get:
+      operationId: getJobMessages
+      tags: [jobs]
+      summary: Get messages for a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendJobMessage
+      tags: [jobs]
+      summary: Send a message on a job thread
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  # ── Job Completion Confirm ──
+  /jobs/{id}/confirm:
+    post:
+      operationId: confirmJob
+      tags: [jobs]
+      summary: Confirm job completion (homeowner or contractor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmJobBody"
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  # ── Storage ──
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve a stored object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object file
 
   # ── Quotes ──
   /quotes:
@@ -1017,6 +1125,69 @@ components:
           type: string
           format: date-time
       required: [id, jobId, raisedById, raisedByName, reason, status, createdAt]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        senderId:
+          type: integer
+        senderName:
+          type: string
+        senderRole:
+          type: string
+          enum: [homeowner, contractor]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, senderId, senderName, senderRole, content, createdAt]
+
+    SendMessageBody:
+      type: object
+      properties:
+        senderId:
+          type: integer
+        senderName:
+          type: string
+        senderRole:
+          type: string
+          enum: [homeowner, contractor]
+        content:
+          type: string
+      required: [senderId, senderName, senderRole, content]
+
+    ConfirmJobBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [homeowner, contractor]
+      required: [role]
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+      required: [name, size, contentType]
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+      required: [uploadURL, objectPath]
 
     CreateDisputeBody:
       type: object

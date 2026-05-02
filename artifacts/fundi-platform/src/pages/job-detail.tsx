@@ -1,21 +1,27 @@
 import { useParams, Link } from "wouter";
-import { ArrowLeft, MapPin, Clock, Briefcase, Star, ShieldCheck, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Briefcase, Star, CheckCircle, Send, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetJob,
   useUpdateQuote,
   useCreateQuote,
+  useGetJobMessages,
+  useSendJobMessage,
+  useConfirmJob,
   getGetJobQueryKey,
+  getGetJobMessagesQueryKey,
 } from "@workspace/api-client-react";
 
 const CONTRACTOR_ID = 2;
+const HOMEOWNER_ID = 1;
+const HOMEOWNER_NAME = "Alice Wanjiku";
 
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
@@ -24,9 +30,20 @@ export default function JobDetailPage() {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteMessage, setQuoteMessage] = useState("");
   const [quoteDays, setQuoteDays] = useState("3");
+  const [msgText, setMsgText] = useState("");
+  const [activeRole, setActiveRole] = useState<"homeowner" | "contractor">("homeowner");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: job, isLoading } = useGetJob(id, {
     query: { enabled: !!id, queryKey: getGetJobQueryKey(id) },
+  });
+
+  const { data: messages = [] } = useGetJobMessages(id, {
+    query: {
+      enabled: !!id,
+      queryKey: getGetJobMessagesQueryKey(id),
+      refetchInterval: 8000,
+    },
   });
 
   const updateQuote = useUpdateQuote({
@@ -44,6 +61,25 @@ export default function JobDetailPage() {
     },
   });
 
+  const sendMessage = useSendJobMessage({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetJobMessagesQueryKey(id) });
+        setMsgText("");
+      },
+    },
+  });
+
+  const confirmJob = useConfirmJob({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetJobQueryKey(id) }),
+    },
+  });
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   if (isLoading) return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
       <Skeleton className="h-64 w-full rounded-xl mb-4" />
@@ -58,12 +94,17 @@ export default function JobDetailPage() {
     </div>
   );
 
+  const canConfirmAsHomeowner = job.status === "in_progress" && !job.homeownerConfirmed;
+  const canConfirmAsContractor = job.status === "in_progress" && !job.contractorConfirmed;
+  const showConfirmSection = job.status === "in_progress";
+
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
       <Button variant="ghost" asChild className="mb-6 -ml-2">
         <Link href="/jobs"><ArrowLeft className="h-4 w-4 mr-2" />Back to Jobs</Link>
       </Button>
 
+      {/* Job info */}
       <Card className="mb-6">
         <CardContent className="p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -96,6 +137,152 @@ export default function JobDetailPage() {
             <div>
               <p className="text-xs text-muted-foreground">Posted by</p>
               <p className="font-semibold">{job.homeownerName}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Completion confirmation */}
+      {showConfirmSection && (
+        <Card className="mb-6 border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              Job Completion Confirmation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-3 text-sm">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${job.homeownerConfirmed ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <CheckCircle className="h-3.5 w-3.5" />
+                Homeowner {job.homeownerConfirmed ? "confirmed" : "pending"}
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${job.contractorConfirmed ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <CheckCircle className="h-3.5 w-3.5" />
+                Contractor {job.contractorConfirmed ? "confirmed" : "pending"}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Both parties must confirm for the job to be marked complete and reviews to open.</p>
+            <div className="flex gap-2 flex-wrap">
+              {canConfirmAsHomeowner && (
+                <Button
+                  size="sm"
+                  onClick={() => confirmJob.mutate({ id, data: { role: "homeowner" } })}
+                  disabled={confirmJob.isPending}
+                >
+                  Confirm as Homeowner
+                </Button>
+              )}
+              {canConfirmAsContractor && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => confirmJob.mutate({ id, data: { role: "contractor" } })}
+                  disabled={confirmJob.isPending}
+                >
+                  Confirm as Contractor
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* In-app messaging */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Job Thread
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {/* Messages */}
+          <div className="max-h-80 overflow-y-auto px-4 py-2 space-y-3">
+            {messages.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-6">No messages yet. Start the conversation!</p>
+            ) : messages.map((m) => {
+              const isMe = m.senderRole === activeRole;
+              return (
+                <div key={m.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                  <Avatar className="h-7 w-7 flex-shrink-0">
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {m.senderName.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
+                    <div className={`px-3 py-2 rounded-xl text-sm ${isMe ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                      {m.content}
+                    </div>
+                    <span className="text-xs text-muted-foreground px-1">
+                      {m.senderName} · {new Date(m.createdAt).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <Separator />
+
+          {/* Role selector + compose */}
+          <div className="p-4 space-y-3">
+            <div className="flex gap-2 text-xs">
+              <span className="text-muted-foreground self-center">Sending as:</span>
+              <button
+                onClick={() => setActiveRole("homeowner")}
+                className={`px-2.5 py-1 rounded-full font-medium transition-colors ${activeRole === "homeowner" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+              >
+                Homeowner
+              </button>
+              <button
+                onClick={() => setActiveRole("contractor")}
+                className={`px-2.5 py-1 rounded-full font-medium transition-colors ${activeRole === "contractor" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+              >
+                Contractor
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Type a message..."
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && msgText.trim()) {
+                    e.preventDefault();
+                    sendMessage.mutate({
+                      id,
+                      data: {
+                        senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID,
+                        senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor",
+                        senderRole: activeRole,
+                        content: msgText.trim(),
+                      },
+                    });
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                disabled={!msgText.trim() || sendMessage.isPending}
+                onClick={() => {
+                  if (!msgText.trim()) return;
+                  sendMessage.mutate({
+                    id,
+                    data: {
+                      senderId: activeRole === "homeowner" ? HOMEOWNER_ID : CONTRACTOR_ID,
+                      senderName: activeRole === "homeowner" ? HOMEOWNER_NAME : "Demo Contractor",
+                      senderRole: activeRole,
+                      content: msgText.trim(),
+                    },
+                  });
+                }}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardContent>

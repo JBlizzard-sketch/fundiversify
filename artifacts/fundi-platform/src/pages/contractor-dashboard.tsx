@@ -1,20 +1,36 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
-import { TrendingUp, Briefcase, Star, Eye, Clock, CheckCircle, ChevronRight, DollarSign } from "lucide-react";
+import { TrendingUp, Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetContractorDashboard,
+  useUpdateContractor,
   getGetContractorDashboardQueryKey,
+  getGetContractorQueryKey,
 } from "@workspace/api-client-react";
+import { ObjectUploader } from "@workspace/object-storage-web";
 
 const CONTRACTOR_ID = 1;
 
 export default function ContractorDashboard() {
+  const queryClient = useQueryClient();
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+
   const { data, isLoading } = useGetContractorDashboard(CONTRACTOR_ID, {
     query: { queryKey: getGetContractorDashboardQueryKey(CONTRACTOR_ID) },
+  });
+
+  const updateContractor = useUpdateContractor({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetContractorQueryKey(CONTRACTOR_ID) });
+      },
+    },
   });
 
   const statCards = [
@@ -60,6 +76,88 @@ export default function ContractorDashboard() {
         })}
       </div>
 
+      {/* Portfolio Upload */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Portfolio Photos</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Add photos of your completed work to attract more clients</p>
+          </div>
+          <ObjectUploader
+            maxNumberOfFiles={5}
+            maxFileSize={10485760}
+            onGetUploadParameters={async (file) => {
+              const res = await fetch("/api/storage/uploads/request-url", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: file.name,
+                  size: file.size,
+                  contentType: file.type,
+                }),
+              });
+              const { uploadURL, objectPath } = await res.json();
+              return {
+                method: "PUT" as const,
+                url: uploadURL,
+                headers: { "Content-Type": file.type ?? "application/octet-stream" },
+                _objectPath: objectPath,
+              };
+            }}
+            onComplete={(result) => {
+              const newPaths = result.successful
+                .map((f) => {
+                  const url = f.uploadURL ?? f.response?.uploadURL;
+                  if (!url) return null;
+                  const match = url.match(/\/objects\/([^?]+)/);
+                  if (match) return `/api/storage/objects/${match[1]}`;
+                  return url.split("?")[0];
+                })
+                .filter(Boolean) as string[];
+
+              if (newPaths.length > 0) {
+                setUploadedPhotos((prev) => [...prev, ...newPaths]);
+                updateContractor.mutate({
+                  id: CONTRACTOR_ID,
+                  data: { portfolioPhotos: [...uploadedPhotos, ...newPaths] },
+                });
+              }
+            }}
+            buttonClassName="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Upload Photos
+          </ObjectUploader>
+        </CardHeader>
+        <CardContent>
+          {uploadedPhotos.length === 0 ? (
+            <div className="border-2 border-dashed border-muted rounded-xl p-10 text-center">
+              <ImagePlus className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No portfolio photos yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Upload photos of your best work to stand out from competitors</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {uploadedPhotos.map((url, i) => (
+                <div key={i} className="group relative aspect-square rounded-lg overflow-hidden bg-muted">
+                  <img src={url} alt={`Portfolio ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => {
+                      const updated = uploadedPhotos.filter((_, j) => j !== i);
+                      setUploadedPhotos(updated);
+                      updateContractor.mutate({ id: CONTRACTOR_ID, data: { portfolioPhotos: updated } });
+                    }}
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Earnings Chart */}
       <Card className="mb-6">
         <CardHeader>
@@ -83,7 +181,7 @@ export default function ContractorDashboard() {
         </CardContent>
       </Card>
 
-      {/* Recent Jobs & Pending */}
+      {/* Recent Jobs & Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
