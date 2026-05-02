@@ -11,6 +11,7 @@ import savedRouter from "./saved";
 import estimateRouter from "./estimate";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(savedRouter);
 router.use(estimateRouter);
 router.use(dashboardRouter);
 router.use(storageRouter);
+router.use(notificationsRouter);
 
 export default router;

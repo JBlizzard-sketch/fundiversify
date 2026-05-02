@@ -511,6 +511,94 @@ export const ConfirmJobResponse = zod.object({
 });
 
 /**
+ * @summary List notifications for a user
+ */
+export const ListNotificationsQueryParams = zod.object({
+  userId: zod.coerce.number(),
+  userRole: zod.coerce.string(),
+  unreadOnly: zod.coerce.boolean().optional(),
+});
+
+export const ListNotificationsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userRole: zod.string(),
+  type: zod.string(),
+  title: zod.string(),
+  message: zod.string(),
+  jobId: zod.number().optional(),
+  read: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListNotificationsResponse = zod.array(
+  ListNotificationsResponseItem,
+);
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkNotificationReadResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userRole: zod.string(),
+  type: zod.string(),
+  title: zod.string(),
+  message: zod.string(),
+  jobId: zod.number().optional(),
+  read: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Mark all notifications as read for a user
+ */
+export const MarkAllNotificationsReadBody = zod.object({
+  userId: zod.number(),
+  userRole: zod.string(),
+});
+
+export const MarkAllNotificationsReadResponse = zod.object({
+  updated: zod.number(),
+});
+
+/**
+ * @summary Get open jobs matching a contractor's trade and location
+ */
+export const getJobMatchesQueryLimitDefault = 10;
+
+export const GetJobMatchesQueryParams = zod.object({
+  contractorId: zod.coerce.number(),
+  limit: zod.coerce.number().default(getJobMatchesQueryLimitDefault),
+});
+
+export const GetJobMatchesResponseItem = zod.object({
+  id: zod.number(),
+  homeownerId: zod.number(),
+  homeownerName: zod.string().optional(),
+  title: zod.string(),
+  trade: zod.string(),
+  location: zod.string(),
+  description: zod.string(),
+  estimatedBudget: zod.number().optional(),
+  status: zod.enum([
+    "open",
+    "quoted",
+    "in_progress",
+    "completed",
+    "disputed",
+    "cancelled",
+  ]),
+  quoteCount: zod.number(),
+  urgency: zod.enum(["flexible", "within_week", "asap"]),
+  createdAt: zod.coerce.date(),
+});
+export const GetJobMatchesResponse = zod.array(GetJobMatchesResponseItem);
+
+/**
  * @summary Request a presigned upload URL
  */
 export const RequestUploadUrlBody = zod.object({

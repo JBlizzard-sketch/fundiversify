@@ -313,6 +313,18 @@ export interface UpdateQuoteBody {
   status: UpdateQuoteBodyStatus;
 }
 
+export interface Notification {
+  id: number;
+  userId: number;
+  userRole: string;
+  type: string;
+  title: string;
+  message: string;
+  jobId?: number;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface CreateReviewBody {
   jobId: number;
   contractorId: number;
@@ -512,6 +524,26 @@ export const ListJobsStatus = {
 
 export type GetJobsSummaryParams = {
   homeownerId?: number;
+};
+
+export type ListNotificationsParams = {
+  userId: number;
+  userRole: string;
+  unreadOnly?: boolean;
+};
+
+export type MarkAllNotificationsReadBody = {
+  userId: number;
+  userRole: string;
+};
+
+export type MarkAllNotificationsRead200 = {
+  updated: number;
+};
+
+export type GetJobMatchesParams = {
+  contractorId: number;
+  limit?: number;
 };
 
 export type GetContractorReviewsParams = {

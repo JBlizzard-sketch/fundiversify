@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, jobsTable, quotesTable, reviewsTable, disputesTable } from "@workspace/db";
+import { db, jobsTable, quotesTable, reviewsTable, disputesTable, contractorsTable } from "@workspace/db";
 import { eq, and, ilike, desc, count, sql } from "drizzle-orm";
 import {
   ListJobsQueryParams,
@@ -11,6 +11,7 @@ import {
   ConfirmJobParams,
   ConfirmJobBody,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,33 @@ router.get("/jobs/summary", async (req, res): Promise<void> => {
   res.json(summary);
 });
 
+// Job matches for a contractor — must come before /jobs/:id
+router.get("/jobs/matches", async (req, res): Promise<void> => {
+  const contractorId = parseInt(req.query.contractorId as string, 10);
+  const limit = parseInt(req.query.limit as string, 10) || 10;
+
+  if (isNaN(contractorId)) {
+    res.status(400).json({ error: "contractorId is required" });
+    return;
+  }
+
+  const [contractor] = await db.select().from(contractorsTable).where(eq(contractorsTable.id, contractorId));
+  if (!contractor) {
+    res.status(404).json({ error: "Contractor not found" });
+    return;
+  }
+
+  const conditions = [eq(jobsTable.status, "open")];
+  if (contractor.trade) conditions.push(ilike(jobsTable.trade, `%${contractor.trade}%`));
+
+  const jobs = await db.select().from(jobsTable)
+    .where(and(...conditions))
+    .orderBy(desc(jobsTable.createdAt))
+    .limit(limit);
+
+  res.json(jobs);
+});
+
 router.get("/jobs", async (req, res): Promise<void> => {
   const parsed = ListJobsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -45,7 +73,6 @@ router.get("/jobs", async (req, res): Promise<void> => {
 
   const { trade, location, status, homeownerId, limit, offset } = parsed.data;
 
-  let query = db.select().from(jobsTable);
   const conditions = [];
   if (trade) conditions.push(ilike(jobsTable.trade, `%${trade}%`));
   if (location) conditions.push(ilike(jobsTable.location, `%${location}%`));
@@ -166,6 +193,57 @@ router.post("/jobs/:id/confirm", async (req, res): Promise<void> => {
     .set(update)
     .where(eq(jobsTable.id, params.data.id))
     .returning();
+
+  // Notify the other party that this party confirmed
+  if (parsed.data.role === "homeowner") {
+    // Find the accepted contractor to notify
+    const [acceptedQuote] = await db.select().from(quotesTable)
+      .where(and(eq(quotesTable.jobId, job.id), eq(quotesTable.status, "accepted")));
+    if (acceptedQuote) {
+      await notify({
+        userId: acceptedQuote.contractorId,
+        userRole: "contractor",
+        type: "homeowner_confirmed",
+        title: "Homeowner confirmed completion",
+        message: `The homeowner confirmed "${job.title}" is complete. Confirm from your side to finalise.`,
+        jobId: job.id,
+      });
+    }
+  } else {
+    await notify({
+      userId: job.homeownerId,
+      userRole: "homeowner",
+      type: "contractor_confirmed",
+      title: "Contractor confirmed completion",
+      message: `The contractor confirmed "${job.title}" is complete. Confirm from your side to finalise.`,
+      jobId: job.id,
+    });
+  }
+
+  // If both confirmed, notify both to leave/expect a review
+  if (bothConfirmed) {
+    await notify({
+      userId: job.homeownerId,
+      userRole: "homeowner",
+      type: "job_completed",
+      title: "Job completed — share your experience",
+      message: `"${job.title}" is now marked complete. Leave a review to help others find great pros.`,
+      jobId: job.id,
+    });
+
+    const [acceptedQuote] = await db.select().from(quotesTable)
+      .where(and(eq(quotesTable.jobId, job.id), eq(quotesTable.status, "accepted")));
+    if (acceptedQuote) {
+      await notify({
+        userId: acceptedQuote.contractorId,
+        userRole: "contractor",
+        type: "job_completed",
+        title: "Job completed!",
+        message: `"${job.title}" has been marked complete by both parties. A review may be posted by the homeowner.`,
+        jobId: job.id,
+      });
+    }
+  }
 
   res.json(job);
 });

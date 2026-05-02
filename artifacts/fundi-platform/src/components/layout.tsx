@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/notification-bell";
 
 const NAV_LINKS = [
   { href: "/contractors", label: "Find a Pro" },
@@ -123,6 +124,12 @@ export function Layout({ children }: { children: ReactNode }) {
             <Button size="sm" asChild>
               <Link href="/jobs/new">Post a Job</Link>
             </Button>
+            <div className="h-5 w-px bg-border mx-1" />
+            {/* Dual notification bells — homeowner + contractor (demo: both visible) */}
+            <div className="flex items-center gap-1">
+              <NotificationBell role="homeowner" />
+              <NotificationBell role="contractor" />
+            </div>
             <div className="h-5 w-px bg-border mx-1" />
             <Show when="signed-out">
               <Button variant="outline" size="sm" asChild>

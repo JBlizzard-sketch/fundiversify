@@ -7,6 +7,7 @@ import {
   UpdateQuoteParams,
   UpdateQuoteBody,
 } from "@workspace/api-zod";
+import { notify } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -29,7 +30,19 @@ router.post("/quotes", async (req, res): Promise<void> => {
   }).returning();
 
   const [{ quoteCount }] = await db.select({ quoteCount: count() }).from(quotesTable).where(eq(quotesTable.jobId, parsed.data.jobId));
-  await db.update(jobsTable).set({ quoteCount, status: "quoted" }).where(eq(jobsTable.id, parsed.data.jobId));
+  const [job] = await db.update(jobsTable).set({ quoteCount, status: "quoted" }).where(eq(jobsTable.id, parsed.data.jobId)).returning();
+
+  // Notify homeowner about new quote
+  if (job) {
+    await notify({
+      userId: job.homeownerId,
+      userRole: "homeowner",
+      type: "new_quote",
+      title: "New quote received",
+      message: `${contractor?.name ?? "A contractor"} submitted a quote of KES ${parsed.data.amount.toLocaleString()} for "${job.title}"`,
+      jobId: job.id,
+    });
+  }
 
   res.status(201).json(quote);
 });
@@ -71,7 +84,29 @@ router.patch("/quotes/:id", async (req, res): Promise<void> => {
   }
 
   if (parsed.data.status === "accepted") {
-    await db.update(jobsTable).set({ status: "in_progress" }).where(eq(jobsTable.id, quote.jobId));
+    const [job] = await db.update(jobsTable).set({ status: "in_progress" }).where(eq(jobsTable.id, quote.jobId)).returning();
+
+    // Notify contractor their quote was accepted
+    await notify({
+      userId: quote.contractorId,
+      userRole: "contractor",
+      type: "quote_accepted",
+      title: "Quote accepted!",
+      message: `Your quote of KES ${quote.amount.toLocaleString()} for "${job?.title ?? `Job #${quote.jobId}`}" was accepted. The job is now in progress.`,
+      jobId: quote.jobId,
+    });
+
+    // Notify homeowner job is starting
+    if (job) {
+      await notify({
+        userId: job.homeownerId,
+        userRole: "homeowner",
+        type: "job_started",
+        title: "Job started",
+        message: `${quote.contractorName} has been hired for "${job.title}". Job is now in progress.`,
+        jobId: job.id,
+      });
+    }
   }
 
   res.json(quote);
