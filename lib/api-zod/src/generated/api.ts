@@ -59,6 +59,8 @@ export const ListContractorsResponse = zod.object({
       jobsCompleted: zod.number(),
       yearsExperience: zod.number().optional(),
       phone: zod.string().optional(),
+      idDocUrl: zod.string().optional(),
+      businessPermitUrl: zod.string().optional(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -78,6 +80,8 @@ export const CreateContractorBody = zod.object({
   avatarUrl: zod.string().optional(),
   portfolioPhotos: zod.array(zod.string()).optional(),
   specializations: zod.array(zod.string()).optional(),
+  idDocUrl: zod.string().optional(),
+  businessPermitUrl: zod.string().optional(),
 });
 
 /**
@@ -107,6 +111,8 @@ export const GetContractorStatsResponse = zod.object({
       jobsCompleted: zod.number(),
       yearsExperience: zod.number().optional(),
       phone: zod.string().optional(),
+      idDocUrl: zod.string().optional(),
+      businessPermitUrl: zod.string().optional(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -137,6 +143,8 @@ export const GetContractorResponse = zod
     jobsCompleted: zod.number(),
     yearsExperience: zod.number().optional(),
     phone: zod.string().optional(),
+    idDocUrl: zod.string().optional(),
+    businessPermitUrl: zod.string().optional(),
     createdAt: zod.coerce.date(),
   })
   .and(
@@ -183,6 +191,8 @@ export const UpdateContractorBody = zod.object({
   avatarUrl: zod.string().optional(),
   portfolioPhotos: zod.array(zod.string()).optional(),
   yearsExperience: zod.number().optional(),
+  idDocUrl: zod.string().optional(),
+  businessPermitUrl: zod.string().optional(),
 });
 
 export const UpdateContractorResponse = zod.object({
@@ -199,6 +209,8 @@ export const UpdateContractorResponse = zod.object({
   jobsCompleted: zod.number(),
   yearsExperience: zod.number().optional(),
   phone: zod.string().optional(),
+  idDocUrl: zod.string().optional(),
+  businessPermitUrl: zod.string().optional(),
   createdAt: zod.coerce.date(),
 });
 
@@ -580,6 +592,30 @@ export const UpdateQuoteResponse = zod.object({
 });
 
 /**
+ * @summary Get review for a specific job (if any)
+ */
+export const GetJobReviewParams = zod.object({
+  jobId: zod.coerce.number(),
+});
+
+export const getJobReviewResponseRatingMax = 5;
+
+export const GetJobReviewResponse = zod.object({
+  id: zod.number(),
+  jobId: zod.number(),
+  contractorId: zod.number(),
+  homeownerId: zod.number(),
+  homeownerName: zod.string(),
+  rating: zod.number().min(1).max(getJobReviewResponseRatingMax),
+  comment: zod.string(),
+  jobTitle: zod.string().optional(),
+  jobTrade: zod.string().optional(),
+  photos: zod.array(zod.string()).optional(),
+  status: zod.enum(["pending", "approved", "rejected"]),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Submit a verified review for a completed job
  */
 export const createReviewBodyRatingMax = 5;
@@ -707,6 +743,8 @@ export const GetSavedContractorsResponseItem = zod.object({
   jobsCompleted: zod.number(),
   yearsExperience: zod.number().optional(),
   phone: zod.string().optional(),
+  idDocUrl: zod.string().optional(),
+  businessPermitUrl: zod.string().optional(),
   createdAt: zod.coerce.date(),
 });
 export const GetSavedContractorsResponse = zod.array(

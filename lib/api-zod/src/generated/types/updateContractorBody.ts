@@ -16,4 +16,6 @@ export interface UpdateContractorBody {
   avatarUrl?: string;
   portfolioPhotos?: string[];
   yearsExperience?: number;
+  idDocUrl?: string;
+  businessPermitUrl?: string;
 }

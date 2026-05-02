@@ -19,6 +19,8 @@ export const contractorsTable = pgTable("contractors", {
   portfolioPhotos: text("portfolio_photos").array().default([]),
   specializations: text("specializations").array().default([]),
   profileViews: integer("profile_views").notNull().default(0),
+  idDocUrl: text("id_doc_url"),
+  businessPermitUrl: text("business_permit_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

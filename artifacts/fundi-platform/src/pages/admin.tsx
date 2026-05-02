@@ -1,4 +1,4 @@
-import { ShieldCheck, AlertTriangle, Users, Briefcase, Star, TrendingUp, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Users, Briefcase, Star, ChevronRight, CheckCircle, XCircle, FileText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,25 +89,69 @@ export default function AdminPage() {
         <TabsContent value="verifications">
           <Card>
             <CardHeader><CardTitle>Contractors Awaiting Verification</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {pendingContractors?.contractors.length === 0 && (
                 <p className="text-center text-muted-foreground py-8 text-sm">No pending verifications</p>
               )}
               {pendingContractors?.contractors.map((c) => (
-                <div key={c.id} className="flex items-center gap-4 p-4 rounded-lg border">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={c.avatarUrl ?? ""} />
-                    <AvatarFallback>{c.name.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{c.name}</p>
-                      <Badge variant="outline" className="text-xs capitalize">{c.verificationStatus}</Badge>
+                <div key={c.id} className="p-4 rounded-lg border space-y-3">
+                  {/* Header row */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={c.avatarUrl ?? ""} />
+                      <AvatarFallback>{c.name.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{c.name}</p>
+                        <Badge variant="outline" className="text-xs capitalize">{c.verificationStatus}</Badge>
+                        {c.subscriptionTier === "pro" && <Badge className="text-xs">Pro</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{c.trade} · {c.location}</p>
+                      <p className="text-xs text-muted-foreground">{c.phone}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{c.trade} · {c.location}</p>
-                    <p className="text-xs text-muted-foreground">{c.phone}</p>
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* Submitted documents */}
+                  <div className="flex gap-2 flex-wrap">
+                    {c.idDocUrl ? (
+                      <a
+                        href={c.idDocUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        National ID
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-muted bg-muted/50 text-xs text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        No ID uploaded
+                      </span>
+                    )}
+                    {c.businessPermitUrl ? (
+                      <a
+                        href={c.businessPermitUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Business Permit
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-muted bg-muted/50 text-xs text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        No permit uploaded
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-1">
                     <Button
                       size="sm"
                       variant="outline"
@@ -150,17 +194,10 @@ export default function AdminPage() {
                       {d.description && <p className="text-sm text-muted-foreground mt-1">{d.description}</p>}
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateDispute.mutate({ id: d.id, data: { status: "under_review" } })}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => updateDispute.mutate({ id: d.id, data: { status: "under_review" } })}>
                         Review
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => updateDispute.mutate({ id: d.id, data: { status: "resolved", resolution: "Resolved by admin after review" } })}
-                      >
+                      <Button size="sm" onClick={() => updateDispute.mutate({ id: d.id, data: { status: "resolved", resolution: "Resolved by admin after review" } })}>
                         Resolve
                       </Button>
                     </div>

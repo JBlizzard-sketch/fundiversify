@@ -478,6 +478,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/Quote"
 
+  # ── Review by Job ──
+  /reviews/job/{jobId}:
+    get:
+      operationId: getJobReview
+      tags: [reviews]
+      summary: Get review for a specific job (if any)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Review or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "404":
+          description: No review for this job
+
   # ── Reviews ──
   /reviews:
     post:
@@ -763,6 +785,10 @@ components:
           type: integer
         phone:
           type: string
+        idDocUrl:
+          type: string
+        businessPermitUrl:
+          type: string
         createdAt:
           type: string
           format: date-time
@@ -849,6 +875,10 @@ components:
           type: array
           items:
             type: string
+        idDocUrl:
+          type: string
+        businessPermitUrl:
+          type: string
       required: [name, trade, location, phone]
 
     UpdateContractorBody:
@@ -872,6 +902,10 @@ components:
             type: string
         yearsExperience:
           type: integer
+        idDocUrl:
+          type: string
+        businessPermitUrl:
+          type: string
 
     Job:
       type: object

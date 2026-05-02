@@ -48,6 +48,8 @@ export interface Contractor {
   jobsCompleted: number;
   yearsExperience?: number;
   phone?: string;
+  idDocUrl?: string;
+  businessPermitUrl?: string;
   createdAt: string;
 }
 
@@ -113,6 +115,8 @@ export interface CreateContractorBody {
   avatarUrl?: string;
   portfolioPhotos?: string[];
   specializations?: string[];
+  idDocUrl?: string;
+  businessPermitUrl?: string;
 }
 
 export type UpdateContractorBodyVerificationStatus =
@@ -140,6 +144,8 @@ export interface UpdateContractorBody {
   avatarUrl?: string;
   portfolioPhotos?: string[];
   yearsExperience?: number;
+  idDocUrl?: string;
+  businessPermitUrl?: string;
 }
 
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];

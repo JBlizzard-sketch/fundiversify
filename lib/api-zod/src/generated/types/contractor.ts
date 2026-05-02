@@ -22,5 +22,7 @@ export interface Contractor {
   jobsCompleted: number;
   yearsExperience?: number;
   phone?: string;
+  idDocUrl?: string;
+  businessPermitUrl?: string;
   createdAt: Date;
 }

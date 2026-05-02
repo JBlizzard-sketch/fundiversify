@@ -12,6 +12,7 @@
 | `@workspace/api-client-react` | `lib/api-client-react` | Generated TanStack Query hooks |
 | `@workspace/api-zod` | `lib/api-zod` | Generated Zod validation schemas |
 | `@workspace/db` | `lib/db` | Drizzle ORM schema + migrations |
+| `@workspace/object-storage-web` | `lib/object-storage-web` | Uppy v5 upload client (GCS presigned URLs) |
 
 ## Stack
 
@@ -19,6 +20,8 @@
 - **Backend**: Express 5, Drizzle ORM, PostgreSQL (Replit managed)
 - **Codegen**: Orval (OpenAPI → React Query hooks + Zod schemas)
 - **Charts**: Recharts (contractor dashboard earnings chart)
+- **File Uploads**: Uppy v5 + `@google-cloud/storage` (GCS-backed presigned URL uploads)
+- **Object Storage**: Replit App Storage bucket provisioned; private objects via `PRIVATE_OBJECT_DIR`
 
 ## Key Decisions
 
@@ -37,11 +40,11 @@
 | `/contractors/:id` | `contractor-profile.tsx` | Profile with reviews, save, book |
 | `/jobs` | `jobs.tsx` | Job marketplace with filters |
 | `/jobs/new` | `post-job.tsx` | Post a job form with live cost estimator |
-| `/jobs/:id` | `job-detail.tsx` | Job detail, quotes list, submit quote |
+| `/jobs/:id` | `job-detail.tsx` | Job detail, quotes, in-app messaging thread, completion confirmation |
 | `/estimate` | `estimate.tsx` | Standalone cost estimator |
 | `/apply` | `apply.tsx` | Multi-step contractor application form |
 | `/dashboard/homeowner` | `homeowner-dashboard.tsx` | My jobs + saved contractors |
-| `/dashboard/contractor` | `contractor-dashboard.tsx` | Earnings chart, performance metrics |
+| `/dashboard/contractor` | `contractor-dashboard.tsx` | Earnings chart, performance metrics, portfolio photo uploads |
 | `/admin` | `admin.tsx` | Verify contractors, resolve disputes |
 
 ## API Endpoints
@@ -67,6 +70,10 @@ All prefixed with `/api`:
 - `GET /estimate` — KES price estimate by trade/location/size
 - `GET /dashboard/stats` — platform admin stats
 - `GET /dashboard/contractor/:contractorId` — contractor earnings dashboard
+- `GET/POST /jobs/:id/messages` — job message thread (polling every 8s)
+- `POST /jobs/:id/confirm` — confirm job completion (homeowner or contractor role; auto-marks completed when both confirm)
+- `POST /storage/uploads/request-url` — GCS presigned upload URL
+- `GET /storage/objects/:path` — serve private uploaded object
 
 ## Database Tables
 
@@ -76,6 +83,7 @@ All prefixed with `/api`:
 - `reviews` — 10 seeded (all approved, tied to contractors)
 - `disputes` — empty (created on demand)
 - `saved_contractors` — empty (created on demand)
+- `messages` — job thread messages (senderId, senderName, senderRole, content, jobId)
 
 ## Running
 
@@ -132,6 +140,7 @@ Auto-provisioned secrets: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLE
 
 ## Recent Improvements
 
+- Phase 3 Marketplace Depth: in-app messaging, portfolio photo uploads via GCS, job completion confirmation flow
 - Phase 2 Auth: Clerk integrated end-to-end — sign in/up pages, user menu in nav, auth-aware layout
 - Home page: functional search → navigates to `/contractors?search=...&location=...`, location chips, "How it Works" section, trust signals grid, contractor CTA
 - Contractors page: reads initial state from URL search params (compatible with home page search redirect)

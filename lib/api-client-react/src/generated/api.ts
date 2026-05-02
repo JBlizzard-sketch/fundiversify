@@ -1778,6 +1778,93 @@ export const useUpdateQuote = <
 };
 
 /**
+ * @summary Get review for a specific job (if any)
+ */
+export const getGetJobReviewUrl = (jobId: number) => {
+  return `/api/reviews/job/${jobId}`;
+};
+
+export const getJobReview = async (
+  jobId: number,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getGetJobReviewUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetJobReviewQueryKey = (jobId: number) => {
+  return [`/api/reviews/job/${jobId}`] as const;
+};
+
+export const getGetJobReviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getJobReview>>,
+  TError = ErrorType<void>,
+>(
+  jobId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJobReview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetJobReviewQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getJobReview>>> = ({
+    signal,
+  }) => getJobReview(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getJobReview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetJobReviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getJobReview>>
+>;
+export type GetJobReviewQueryError = ErrorType<void>;
+
+/**
+ * @summary Get review for a specific job (if any)
+ */
+
+export function useGetJobReview<
+  TData = Awaited<ReturnType<typeof getJobReview>>,
+  TError = ErrorType<void>,
+>(
+  jobId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getJobReview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetJobReviewQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Submit a verified review for a completed job
  */
 export const getCreateReviewUrl = () => {

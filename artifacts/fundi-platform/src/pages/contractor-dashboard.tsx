@@ -1,6 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
-import { TrendingUp, Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X } from "lucide-react";
+import { Briefcase, Star, Eye, CheckCircle, ChevronRight, DollarSign, Upload, ImagePlus, X, Zap, ShieldCheck, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetContractorDashboard,
+  useGetContractor,
   useUpdateContractor,
   getGetContractorDashboardQueryKey,
   getGetContractorQueryKey,
@@ -17,21 +18,36 @@ import { ObjectUploader } from "@workspace/object-storage-web";
 
 const CONTRACTOR_ID = 1;
 
+const PRO_BENEFITS = [
+  { icon: TrendingUp, text: "Priority placement in search results" },
+  { icon: ShieldCheck, text: "Verified Pro badge on your profile" },
+  { icon: Star, text: "Unlimited quote submissions per month" },
+  { icon: Zap, text: "Instant lead notifications via SMS" },
+];
+
 export default function ContractorDashboard() {
   const queryClient = useQueryClient();
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [upgrading, setUpgrading] = useState(false);
 
   const { data, isLoading } = useGetContractorDashboard(CONTRACTOR_ID, {
     query: { queryKey: getGetContractorDashboardQueryKey(CONTRACTOR_ID) },
+  });
+
+  const { data: contractor } = useGetContractor(CONTRACTOR_ID, {
+    query: { queryKey: getGetContractorQueryKey(CONTRACTOR_ID) },
   });
 
   const updateContractor = useUpdateContractor({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetContractorQueryKey(CONTRACTOR_ID) });
+        setUpgrading(false);
       },
     },
   });
+
+  const isPro = contractor?.subscriptionTier === "pro";
 
   const statCards = [
     { label: "Total Earnings", value: data ? `KES ${data.totalEarnings.toLocaleString()}` : "—", icon: DollarSign, sub: `KES ${data?.thisMonthEarnings?.toLocaleString() ?? 0} this month` },
@@ -44,7 +60,10 @@ export default function ContractorDashboard() {
     <div className="container mx-auto px-4 py-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Pro Dashboard</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-3xl font-bold">Pro Dashboard</h1>
+            {isPro && <Badge className="text-xs">Pro Member</Badge>}
+          </div>
           <p className="text-muted-foreground">Your earnings, performance, and job activity.</p>
         </div>
         <div className="flex gap-2">
@@ -76,6 +95,61 @@ export default function ContractorDashboard() {
         })}
       </div>
 
+      {/* Pro Upgrade CTA — only shown for free tier */}
+      {!isPro && (
+        <Card className="mb-6 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-5 w-5 text-amber-600" />
+                  <span className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Upgrade to Pro</span>
+                </div>
+                <h3 className="text-xl font-bold mb-3">Get 3× more leads every month</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {PRO_BENEFITS.map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-2 text-sm">
+                      <Icon className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col items-start md:items-center gap-3 flex-shrink-0">
+                <div className="text-center">
+                  <p className="text-3xl font-bold">KES 2,500</p>
+                  <p className="text-sm text-muted-foreground">per month · M-Pesa</p>
+                </div>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700 text-white w-full"
+                  disabled={upgrading || updateContractor.isPending}
+                  onClick={() => {
+                    setUpgrading(true);
+                    updateContractor.mutate({ id: CONTRACTOR_ID, data: { subscriptionTier: "pro" } });
+                  }}
+                >
+                  {upgrading || updateContractor.isPending ? "Processing..." : "Upgrade Now"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">Cancel anytime · No contract</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Already Pro confirmation */}
+      {isPro && (
+        <Card className="mb-6 border-primary/30 bg-primary/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
+            <div>
+              <p className="font-medium text-sm">You're a Pro Member</p>
+              <p className="text-xs text-muted-foreground">Enjoying priority placement, verified badge, and unlimited leads.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Portfolio Upload */}
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -90,19 +164,10 @@ export default function ContractorDashboard() {
               const res = await fetch("/api/storage/uploads/request-url", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  name: file.name,
-                  size: file.size,
-                  contentType: file.type,
-                }),
+                body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
               });
-              const { uploadURL, objectPath } = await res.json();
-              return {
-                method: "PUT" as const,
-                url: uploadURL,
-                headers: { "Content-Type": file.type ?? "application/octet-stream" },
-                _objectPath: objectPath,
-              };
+              const { uploadURL } = await res.json();
+              return { method: "PUT" as const, url: uploadURL, headers: { "Content-Type": file.type ?? "application/octet-stream" } };
             }}
             onComplete={(result) => {
               const newPaths = result.successful
@@ -114,13 +179,10 @@ export default function ContractorDashboard() {
                   return url.split("?")[0];
                 })
                 .filter(Boolean) as string[];
-
               if (newPaths.length > 0) {
-                setUploadedPhotos((prev) => [...prev, ...newPaths]);
-                updateContractor.mutate({
-                  id: CONTRACTOR_ID,
-                  data: { portfolioPhotos: [...uploadedPhotos, ...newPaths] },
-                });
+                const updated = [...uploadedPhotos, ...newPaths];
+                setUploadedPhotos(updated);
+                updateContractor.mutate({ id: CONTRACTOR_ID, data: { portfolioPhotos: updated } });
               }
             }}
             buttonClassName="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -160,9 +222,7 @@ export default function ContractorDashboard() {
 
       {/* Earnings Chart */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Earnings — Last 6 Months</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Earnings — Last 6 Months</CardTitle></CardHeader>
         <CardContent>
           {isLoading ? <Skeleton className="h-48 w-full" /> : (
             <ResponsiveContainer width="100%" height={200}>
@@ -170,10 +230,7 @@ export default function ContractorDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  formatter={(v: number) => [`KES ${v.toLocaleString()}`, "Earnings"]}
-                  contentStyle={{ border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                />
+                <Tooltip formatter={(v: number) => [`KES ${v.toLocaleString()}`, "Earnings"]} contentStyle={{ border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
                 <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -199,9 +256,7 @@ export default function ContractorDashboard() {
                     <p className="text-xs text-muted-foreground">{job.location} · {job.trade}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={job.status === "open" ? "default" : "secondary"} className="text-xs capitalize">
-                      {job.status.replace("_", " ")}
-                    </Badge>
+                    <Badge variant={job.status === "open" ? "default" : "secondary"} className="text-xs capitalize">{job.status.replace("_", " ")}</Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>

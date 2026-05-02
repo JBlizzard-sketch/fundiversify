@@ -16,4 +16,6 @@ export interface CreateContractorBody {
   avatarUrl?: string;
   portfolioPhotos?: string[];
   specializations?: string[];
+  idDocUrl?: string;
+  businessPermitUrl?: string;
 }
