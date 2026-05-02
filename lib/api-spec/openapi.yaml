@@ -1,0 +1,1162 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: FundiVerify — Nairobi Contractor Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: contractors
+    description: Contractor directory and profiles
+  - name: jobs
+    description: Job posting and marketplace
+  - name: quotes
+    description: Quote submission and management
+  - name: reviews
+    description: Verified job reviews
+  - name: disputes
+    description: Dispute resolution
+  - name: saved
+    description: Saved contractors
+  - name: estimate
+    description: Job cost estimation
+  - name: dashboard
+    description: Dashboard and analytics
+  - name: trades
+    description: Trade categories
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Trades ──
+  /trades:
+    get:
+      operationId: listTrades
+      tags: [trades]
+      summary: List all trade categories
+      responses:
+        "200":
+          description: List of trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
+
+  # ── Contractors ──
+  /contractors:
+    get:
+      operationId: listContractors
+      tags: [contractors]
+      summary: List and search verified contractors
+      parameters:
+        - name: trade
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [free, pro]
+        - name: minRating
+          in: query
+          schema:
+            type: number
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of contractors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorListResponse"
+    post:
+      operationId: createContractor
+      tags: [contractors]
+      summary: Apply as a contractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractorBody"
+      responses:
+        "201":
+          description: Contractor application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contractor"
+
+  /contractors/stats:
+    get:
+      operationId: getContractorStats
+      tags: [contractors]
+      summary: Platform-wide contractor statistics
+      responses:
+        "200":
+          description: Contractor statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorStats"
+
+  /contractors/{id}:
+    get:
+      operationId: getContractor
+      tags: [contractors]
+      summary: Get contractor profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contractor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateContractor
+      tags: [contractors]
+      summary: Update contractor profile or verification status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractorBody"
+      responses:
+        "200":
+          description: Updated contractor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contractor"
+
+  # ── Jobs ──
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List job postings (marketplace for contractors)
+      parameters:
+        - name: trade
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, quoted, in_progress, completed, disputed, cancelled]
+        - name: homeownerId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Job listings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobListResponse"
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Post a new job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobBody"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/summary:
+    get:
+      operationId: getJobsSummary
+      tags: [jobs]
+      summary: Homeowner job summary (counts by status, recent activity)
+      parameters:
+        - name: homeownerId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobsSummary"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get job detail with quotes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateJob
+      tags: [jobs]
+      summary: Update job status or details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobBody"
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  # ── Quotes ──
+  /quotes:
+    post:
+      operationId: createQuote
+      tags: [quotes]
+      summary: Submit a quote on a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuoteBody"
+      responses:
+        "201":
+          description: Quote submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+
+  /quotes/job/{jobId}:
+    get:
+      operationId: getJobQuotes
+      tags: [quotes]
+      summary: Get all quotes for a job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quotes for job
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quote"
+
+  /quotes/{id}:
+    patch:
+      operationId: updateQuote
+      tags: [quotes]
+      summary: Accept or reject a quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuoteBody"
+      responses:
+        "200":
+          description: Updated quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+
+  # ── Reviews ──
+  /reviews:
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Submit a verified review for a completed job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /reviews/contractor/{contractorId}:
+    get:
+      operationId: getContractorReviews
+      tags: [reviews]
+      summary: Get all reviews for a contractor
+      parameters:
+        - name: contractorId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Contractor reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+  # ── Disputes ──
+  /disputes:
+    get:
+      operationId: listDisputes
+      tags: [disputes]
+      summary: List disputes (admin view)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, under_review, resolved, closed]
+      responses:
+        "200":
+          description: List of disputes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dispute"
+    post:
+      operationId: createDispute
+      tags: [disputes]
+      summary: Raise a dispute for a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDisputeBody"
+      responses:
+        "201":
+          description: Dispute raised
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dispute"
+
+  /disputes/{id}:
+    patch:
+      operationId: updateDispute
+      tags: [disputes]
+      summary: Update dispute status/resolution (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDisputeBody"
+      responses:
+        "200":
+          description: Updated dispute
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dispute"
+
+  # ── Saved Contractors ──
+  /saved-contractors:
+    get:
+      operationId: getSavedContractors
+      tags: [saved]
+      summary: Get saved contractors for a homeowner
+      parameters:
+        - name: homeownerId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Saved contractors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contractor"
+    post:
+      operationId: saveContractor
+      tags: [saved]
+      summary: Save a contractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveContractorBody"
+      responses:
+        "201":
+          description: Contractor saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedContractor"
+
+  /saved-contractors/{contractorId}:
+    delete:
+      operationId: unsaveContractor
+      tags: [saved]
+      summary: Remove a saved contractor
+      parameters:
+        - name: contractorId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: homeownerId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Contractor unsaved
+
+  # ── Job Estimate ──
+  /estimate:
+    get:
+      operationId: getJobEstimate
+      tags: [estimate]
+      summary: Get rough price estimate for a job type
+      parameters:
+        - name: trade
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: size
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Price estimate range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobEstimate"
+
+  # ── Dashboard ──
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Platform-wide stats for admin dashboard
+      responses:
+        "200":
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/contractor/{contractorId}:
+    get:
+      operationId: getContractorDashboard
+      tags: [dashboard]
+      summary: Contractor earnings and performance dashboard
+      parameters:
+        - name: contractorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contractor dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorDashboard"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Trade:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        contractorCount:
+          type: integer
+      required: [id, name, slug, icon, contractorCount]
+
+    Contractor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        trade:
+          type: string
+        location:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        verificationStatus:
+          type: string
+          enum: [pending, verified, rejected]
+        subscriptionTier:
+          type: string
+          enum: [free, pro]
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        jobsCompleted:
+          type: integer
+        yearsExperience:
+          type: integer
+        phone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, trade, location, verificationStatus, subscriptionTier, rating, reviewCount, jobsCompleted, createdAt]
+
+    ContractorDetail:
+      allOf:
+        - $ref: "#/components/schemas/Contractor"
+        - type: object
+          properties:
+            portfolioPhotos:
+              type: array
+              items:
+                type: string
+            specializations:
+              type: array
+              items:
+                type: string
+            reviews:
+              type: array
+              items:
+                $ref: "#/components/schemas/Review"
+            isSaved:
+              type: boolean
+
+    ContractorListResponse:
+      type: object
+      properties:
+        contractors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contractor"
+        total:
+          type: integer
+      required: [contractors, total]
+
+    ContractorStats:
+      type: object
+      properties:
+        totalVerified:
+          type: integer
+        totalPro:
+          type: integer
+        byTrade:
+          type: array
+          items:
+            type: object
+            properties:
+              trade:
+                type: string
+              count:
+                type: integer
+            required: [trade, count]
+        topRated:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contractor"
+        newThisMonth:
+          type: integer
+      required: [totalVerified, totalPro, byTrade, topRated, newThisMonth]
+
+    CreateContractorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        trade:
+          type: string
+        location:
+          type: string
+        bio:
+          type: string
+        phone:
+          type: string
+        yearsExperience:
+          type: integer
+        avatarUrl:
+          type: string
+        portfolioPhotos:
+          type: array
+          items:
+            type: string
+        specializations:
+          type: array
+          items:
+            type: string
+      required: [name, trade, location, phone]
+
+    UpdateContractorBody:
+      type: object
+      properties:
+        bio:
+          type: string
+        location:
+          type: string
+        verificationStatus:
+          type: string
+          enum: [pending, verified, rejected]
+        subscriptionTier:
+          type: string
+          enum: [free, pro]
+        avatarUrl:
+          type: string
+        portfolioPhotos:
+          type: array
+          items:
+            type: string
+        yearsExperience:
+          type: integer
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        homeownerId:
+          type: integer
+        homeownerName:
+          type: string
+        title:
+          type: string
+        trade:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        estimatedBudget:
+          type: number
+        status:
+          type: string
+          enum: [open, quoted, in_progress, completed, disputed, cancelled]
+        quoteCount:
+          type: integer
+        urgency:
+          type: string
+          enum: [flexible, within_week, asap]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, homeownerId, title, trade, location, description, status, quoteCount, urgency, createdAt]
+
+    JobDetail:
+      allOf:
+        - $ref: "#/components/schemas/Job"
+        - type: object
+          properties:
+            quotes:
+              type: array
+              items:
+                $ref: "#/components/schemas/Quote"
+            review:
+              $ref: "#/components/schemas/Review"
+            dispute:
+              $ref: "#/components/schemas/Dispute"
+
+    JobListResponse:
+      type: object
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        total:
+          type: integer
+      required: [jobs, total]
+
+    JobsSummary:
+      type: object
+      properties:
+        open:
+          type: integer
+        quoted:
+          type: integer
+        inProgress:
+          type: integer
+        completed:
+          type: integer
+        disputed:
+          type: integer
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+      required: [open, quoted, inProgress, completed, disputed, recentJobs]
+
+    CreateJobBody:
+      type: object
+      properties:
+        homeownerId:
+          type: integer
+        homeownerName:
+          type: string
+        title:
+          type: string
+        trade:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        estimatedBudget:
+          type: number
+        urgency:
+          type: string
+          enum: [flexible, within_week, asap]
+      required: [homeownerId, homeownerName, title, trade, location, description, urgency]
+
+    UpdateJobBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, quoted, in_progress, completed, disputed, cancelled]
+        homeownerConfirmed:
+          type: boolean
+        contractorConfirmed:
+          type: boolean
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        contractorId:
+          type: integer
+        contractorName:
+          type: string
+        contractorRating:
+          type: number
+        contractorAvatarUrl:
+          type: string
+        contractorTier:
+          type: string
+          enum: [free, pro]
+        amount:
+          type: number
+        message:
+          type: string
+        estimatedDays:
+          type: integer
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, contractorId, contractorName, amount, estimatedDays, status, createdAt]
+
+    CreateQuoteBody:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        contractorId:
+          type: integer
+        amount:
+          type: number
+        message:
+          type: string
+        estimatedDays:
+          type: integer
+      required: [jobId, contractorId, amount, estimatedDays]
+
+    UpdateQuoteBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [accepted, rejected]
+      required: [status]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        contractorId:
+          type: integer
+        homeownerId:
+          type: integer
+        homeownerName:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        jobTitle:
+          type: string
+        jobTrade:
+          type: string
+        photos:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, contractorId, homeownerId, homeownerName, rating, comment, status, createdAt]
+
+    CreateReviewBody:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        contractorId:
+          type: integer
+        homeownerId:
+          type: integer
+        homeownerName:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        jobTitle:
+          type: string
+        jobTrade:
+          type: string
+        photos:
+          type: array
+          items:
+            type: string
+      required: [jobId, contractorId, homeownerId, homeownerName, rating, comment]
+
+    Dispute:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        jobTitle:
+          type: string
+        raisedById:
+          type: integer
+        raisedByName:
+          type: string
+        reason:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, under_review, resolved, closed]
+        resolution:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, raisedById, raisedByName, reason, status, createdAt]
+
+    CreateDisputeBody:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        raisedById:
+          type: integer
+        raisedByName:
+          type: string
+        reason:
+          type: string
+        description:
+          type: string
+      required: [jobId, raisedById, raisedByName, reason]
+
+    UpdateDisputeBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, under_review, resolved, closed]
+        resolution:
+          type: string
+
+    SavedContractor:
+      type: object
+      properties:
+        id:
+          type: integer
+        homeownerId:
+          type: integer
+        contractorId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, homeownerId, contractorId, createdAt]
+
+    SaveContractorBody:
+      type: object
+      properties:
+        homeownerId:
+          type: integer
+        contractorId:
+          type: integer
+      required: [homeownerId, contractorId]
+
+    JobEstimate:
+      type: object
+      properties:
+        trade:
+          type: string
+        minKes:
+          type: integer
+        maxKes:
+          type: integer
+        typicalDays:
+          type: integer
+        note:
+          type: string
+        factors:
+          type: array
+          items:
+            type: string
+      required: [trade, minKes, maxKes, typicalDays, note, factors]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalContractors:
+          type: integer
+        verifiedContractors:
+          type: integer
+        totalJobs:
+          type: integer
+        completedJobs:
+          type: integer
+        totalReviews:
+          type: integer
+        openDisputes:
+          type: integer
+        jobsByTrade:
+          type: array
+          items:
+            type: object
+            properties:
+              trade:
+                type: string
+              count:
+                type: integer
+            required: [trade, count]
+        recentActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+            required: [type, message, timestamp]
+      required: [totalContractors, verifiedContractors, totalJobs, completedJobs, totalReviews, openDisputes, jobsByTrade, recentActivity]
+
+    ContractorDashboard:
+      type: object
+      properties:
+        contractorId:
+          type: integer
+        totalEarnings:
+          type: number
+        thisMonthEarnings:
+          type: number
+        jobsCompleted:
+          type: integer
+        activeJobs:
+          type: integer
+        pendingQuotes:
+          type: integer
+        averageRating:
+          type: number
+        profileViews:
+          type: integer
+        leadsReceived:
+          type: integer
+        earningsByMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+              amount:
+                type: number
+            required: [month, amount]
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+      required: [contractorId, totalEarnings, thisMonthEarnings, jobsCompleted, activeJobs, pendingQuotes, averageRating, profileViews, leadsReceived, earningsByMonth, recentJobs]

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "FundiVerify — Nairobi Contractor Platform"
+version = "1.0.0"
+id = "artifacts/fundi-platform"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22168
+
+[services.development]
+run = "pnpm --filter @workspace/fundi-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/fundi-platform", "run", "build" ]
+publicDir = "artifacts/fundi-platform/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22168"
+BASE_PATH = "/"

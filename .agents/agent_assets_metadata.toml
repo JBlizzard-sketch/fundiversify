@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "taw4Mx-3qTvhSqeUz0qLK"
+uri = "file://artifacts/fundi-platform/public/avatars/contractor-1.png"
+type = "image"
+title = "Contractor Avatar 1"
+
+[[generated]]
+id = "8s785rBKJDC0palZXKC_4"
+uri = "file://artifacts/fundi-platform/public/avatars/contractor-2.png"
+type = "image"
+title = "Contractor Avatar 2"
+
+[[generated]]
+id = "3tjTjt6u33mG0FX2WNjg0"
+uri = "file://artifacts/fundi-platform/public/avatars/contractor-3.png"
+type = "image"
+title = "Contractor Avatar 3"
+
+[[generated]]
+id = "G5Uz-Pa89XbY8VdOlUoRn"
+uri = "file://artifacts/fundi-platform/public/avatars/contractor-4.png"
+type = "image"
+title = "Contractor Avatar 4"
+
+[[generated]]
+id = "pFzJI38DT8VOSaiyo7Ypg"
+uri = "file://artifacts/fundi-platform/public/avatars/contractor-5.png"
+type = "image"
+title = "Contractor Avatar 5"
