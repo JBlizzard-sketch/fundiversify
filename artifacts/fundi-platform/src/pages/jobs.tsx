@@ -252,6 +252,8 @@ export default function JobsPage() {
             const urgencyInfo = URGENCY_MAP[job.urgency] ?? URGENCY_MAP.flexible;
             const TradeIcon = TRADE_ICONS[job.trade] ?? TRADE_ICONS.default;
             const isHot = job.urgency === "asap";
+            const daysSincePosted = (Date.now() - new Date(job.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+            const isExpiring = daysSincePosted >= 10 && job.status === "open" && job.quoteCount === 0;
             return (
               <div key={job.id} className="relative">
                 <Link href={`/jobs/${job.id}`}>
@@ -273,6 +275,11 @@ export default function JobsPage() {
                               <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 capitalize ${STATUS_COLORS[job.status] ?? ""}`}>
                                 {job.status.replace("_", " ")}
                               </span>
+                              {isExpiring && (
+                                <span className="text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                                  ⏳ Expiring soon
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2 mb-2.5">{job.description}</p>
                             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">

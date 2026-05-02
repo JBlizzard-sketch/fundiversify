@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShieldCheck, Menu, X, ChevronRight, LogIn, LogOut, User, LayoutDashboard } from "lucide-react";
+import { ShieldCheck, Menu, X, ChevronRight, LogIn, LogOut, User, LayoutDashboard, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
 import {
@@ -18,6 +18,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const NAV_LINKS = [
   { href: "/contractors", label: "Find a Pro" },
   { href: "/jobs", label: "Browse Jobs" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/estimate", label: "Estimator" },
   { href: "/pricing", label: "Pricing" },
 ];
@@ -268,6 +269,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div>
             <h3 className="font-semibold mb-4 text-sm">Platform</h3>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
+              <li><Link href="/leaderboard" className="hover:text-primary transition-colors">FundiScore™ Leaderboard</Link></li>
               <li><Link href="/admin" className="hover:text-primary transition-colors">Admin Panel</Link></li>
               <li className="text-muted-foreground/60">About Us (coming soon)</li>
               <li className="text-muted-foreground/60">Contact Support (coming soon)</li>

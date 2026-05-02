@@ -298,6 +298,52 @@ export default function PostJobPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">Sharing a budget helps filter serious pros. You can always negotiate.</p>
+
+            {/* Smart pricing advisory */}
+            {form.estimatedBudget && estimate && (() => {
+              const budget = parseFloat(form.estimatedBudget);
+              const pctOfMin = budget / estimate.minKes;
+              const pctOfMax = budget / estimate.maxKes;
+              let advisory: { label: string; detail: string; cls: string; icon: string } | null = null;
+              if (pctOfMin < 0.7) {
+                advisory = {
+                  label: "Well below market rate",
+                  detail: `Your budget is ${Math.round((1 - pctOfMin) * 100)}% below the typical minimum of KES ${estimate.minKes.toLocaleString()}. Expect very few quotes.`,
+                  cls: "border-red-200 bg-red-50 text-red-700",
+                  icon: "⚠️",
+                };
+              } else if (pctOfMin < 0.9) {
+                advisory = {
+                  label: "Slightly below market",
+                  detail: `Consider raising to at least KES ${estimate.minKes.toLocaleString()} to attract more quotes.`,
+                  cls: "border-amber-200 bg-amber-50 text-amber-700",
+                  icon: "💡",
+                };
+              } else if (pctOfMax <= 1.0) {
+                advisory = {
+                  label: "Competitive budget",
+                  detail: `Within the typical range. Expect 4–8 quotes from verified pros.`,
+                  cls: "border-green-200 bg-green-50 text-green-700",
+                  icon: "✅",
+                };
+              } else {
+                advisory = {
+                  label: "Above market rate",
+                  detail: `${Math.round((pctOfMax - 1) * 100)}% above typical max. You'll attract maximum interest from top pros.`,
+                  cls: "border-blue-200 bg-blue-50 text-blue-700",
+                  icon: "🚀",
+                };
+              }
+              return advisory ? (
+                <div className={`mt-2 flex items-start gap-2.5 p-3 rounded-xl border text-sm ${advisory.cls}`}>
+                  <span className="text-base flex-shrink-0 mt-0.5">{advisory.icon}</span>
+                  <div>
+                    <p className="font-semibold">{advisory.label}</p>
+                    <p className="text-xs mt-0.5 opacity-80">{advisory.detail}</p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           <div>

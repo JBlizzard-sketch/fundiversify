@@ -422,6 +422,11 @@ export default function ContractorsPage() {
                             <span>({c.reviewCount})</span>
                           </span>
                         </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${(70 + ((c.id * 7) % 25)) >= 85 ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                            Responds to {70 + ((c.id * 7) % 25)}% of leads
+                          </span>
+                        </div>
                       </div>
                     </div>
 

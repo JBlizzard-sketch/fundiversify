@@ -22,6 +22,7 @@ import ContractorDashboard from "@/pages/contractor-dashboard";
 import AdminPage from "@/pages/admin";
 import PricingPage from "@/pages/pricing";
 import TradeLandingPage from "@/pages/trade-landing";
+import LeaderboardPage from "@/pages/leaderboard";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -163,6 +164,7 @@ function Router() {
         <Route path="/pricing" component={PricingPage} />
         <Route path="/hire/:trade/:location" component={TradeLandingPage} />
         <Route path="/hire/:trade" component={TradeLandingPage} />
+        <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/admin" component={AdminPage} />
         <Route component={NotFound} />
       </Switch>
