@@ -259,6 +259,7 @@ export default function ContractorDashboard() {
             )}
           </TabsTrigger>
           <TabsTrigger value="recent">Recent Jobs</TabsTrigger>
+          <TabsTrigger value="earnings">Earnings</TabsTrigger>
           <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
@@ -358,6 +359,162 @@ export default function ContractorDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Earnings */}
+        <TabsContent value="earnings">
+          <div className="space-y-6">
+            {/* Summary KPI strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Total Earned",       value: `KES ${(data?.totalEarnings ?? 0).toLocaleString()}`,          sub: "all time",                  color: "text-primary" },
+                { label: "This Month",         value: `KES ${(data?.thisMonthEarnings ?? 0).toLocaleString()}`,      sub: "May 2026",                  color: "text-green-600" },
+                { label: "Pending Payout",     value: `KES ${Math.round((data?.thisMonthEarnings ?? 0) * 0.6).toLocaleString()}`, sub: "Est. payout Jun 15", color: "text-amber-600" },
+                { label: "Jobs Completed",     value: String(data?.jobsCompleted ?? 0),                              sub: "billable jobs",             color: "text-foreground" },
+              ].map((kpi) => (
+                <Card key={kpi.label}>
+                  <CardContent className="p-5">
+                    <p className="text-xs text-muted-foreground mb-1">{kpi.label}</p>
+                    {isLoading ? <Skeleton className="h-7 w-24 mb-1" /> : (
+                      <p className={`text-xl font-bold mb-0.5 ${kpi.color}`}>{kpi.value}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{kpi.sub}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Earnings chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Monthly Earnings — Last 6 Months
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? <Skeleton className="h-48 w-full" /> : (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={data?.earningsByMonth ?? []}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        formatter={(v: number) => [`KES ${v.toLocaleString()}`, "Earnings"]}
+                        contentStyle={{ border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                      />
+                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Per-job payment history */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payment History</CardTitle>
+                <p className="text-xs text-muted-foreground">Each completed job and its estimated payment</p>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+                  </div>
+                ) : data?.recentJobs && data.recentJobs.filter((j) => j.status === "completed" || j.status === "in_progress").length > 0 ? (
+                  <div className="divide-y">
+                    {data.recentJobs
+                      .filter((j) => j.status === "completed" || j.status === "in_progress")
+                      .map((job) => {
+                        const amount = job.estimatedBudget ?? 0;
+                        const isPaid = job.status === "completed";
+                        return (
+                          <div key={job.id} className="flex items-center justify-between py-3 gap-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{job.title}</p>
+                              <p className="text-xs text-muted-foreground">{job.location} · {job.trade}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={`text-sm font-semibold ${isPaid ? "text-green-700" : "text-amber-600"}`}>
+                                {amount > 0 ? `KES ${amount.toLocaleString()}` : "TBD"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{isPaid ? "Paid" : "In progress"}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <DollarSign className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">No completed jobs yet</p>
+                    <p className="text-xs mt-1">Finish your first job to see payment history</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Next payout + upgrade */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="border-green-200 bg-green-50/40">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-green-700" />
+                    </div>
+                    <p className="font-semibold text-sm text-green-800">Next Payout</p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-700 mb-1">
+                    KES {Math.round((data?.thisMonthEarnings ?? 0) * 0.6).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-green-700/70">Estimated · June 15, 2026</p>
+                  <div className="mt-3 pt-3 border-t border-green-200">
+                    <p className="text-xs text-green-800/70">M-Pesa disbursement · FundiVerify takes 10% platform fee.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {!isPro && (
+                <Card className="border-amber-200 bg-amber-50/40">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <Zap className="h-4 w-4 text-amber-700" />
+                      </div>
+                      <p className="font-semibold text-sm text-amber-800">Unlock Instant Payouts</p>
+                    </div>
+                    <p className="text-xs text-amber-700/80 mb-3">
+                      Pro members get M-Pesa payouts within 24h of job completion — no more waiting until the 15th.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700 text-white w-full"
+                      onClick={() => updateContractor.mutate({ id: CONTRACTOR_ID, data: { subscriptionTier: "pro" } })}
+                      disabled={updateContractor.isPending}
+                    >
+                      <Zap className="h-3.5 w-3.5 mr-1.5" />
+                      Upgrade to Pro — KES 2,500/mo
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              {isPro && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                      </div>
+                      <p className="font-semibold text-sm">Pro Instant Payouts Active</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your earnings are disbursed via M-Pesa within 24h of each completed job. Reduced platform fee of 8%.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         {/* Portfolio */}

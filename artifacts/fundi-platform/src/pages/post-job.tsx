@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation, useSearch, Link } from "wouter";
-import { ArrowLeft, ArrowRight, Calculator, CheckCircle, MapPin, Briefcase, Clock, FileText, DollarSign, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, CheckCircle, MapPin, Briefcase, Clock, FileText, DollarSign, Camera, X, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateJob, useGetJobEstimate, getGetJobEstimateQueryKey } from "@workspace/api-client-react";
 
 const TRADES = ["Plumbing", "Electrical", "Painting", "Tiling", "Roofing", "Carpentry", "Masonry", "Fundi", "HVAC", "Welding"];
@@ -27,6 +26,7 @@ export default function PostJobPage() {
   const [, navigate] = useLocation();
   const rawSearch = useSearch();
   const urlParams = new URLSearchParams(rawSearch);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -37,6 +37,7 @@ export default function PostJobPage() {
     estimatedBudget: "",
     urgency: "flexible",
   });
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
 
   const { data: estimate } = useGetJobEstimate(
     { trade: form.trade, location: form.location },
@@ -208,6 +209,66 @@ export default function PostJobPage() {
             </div>
           </div>
 
+          {/* Photo uploads */}
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Add photos <span className="normal-case font-normal text-muted-foreground/70">(optional · up to 5)</span></p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                const remaining = 5 - photos.length;
+                const toAdd = files.slice(0, remaining).map((file) => ({
+                  file,
+                  preview: URL.createObjectURL(file),
+                }));
+                setPhotos((prev) => [...prev, ...toAdd]);
+                e.target.value = "";
+              }}
+            />
+            {photos.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 rounded-xl py-6 flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-all group"
+              >
+                <ImagePlus className="h-7 w-7 opacity-40 group-hover:opacity-70 transition-opacity" />
+                <span className="text-sm">Tap to add photos of the job area</span>
+                <span className="text-xs opacity-60">Helps pros give more accurate quotes</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="grid grid-cols-5 gap-2">
+                  {photos.map((p, i) => (
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
+                      <img src={p.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                        className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {photos.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 flex items-center justify-center text-muted-foreground hover:text-primary transition-all"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{photos.length} of 5 photos added</p>
+              </div>
+            )}
+          </div>
+
           <div className="p-3.5 bg-muted/50 rounded-xl flex items-start gap-2.5 text-xs text-muted-foreground">
             <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
             <p>More detail = better quotes. Pros who can see the full scope will price more accurately and accept work with confidence.</p>
@@ -306,6 +367,19 @@ export default function PostJobPage() {
                   </p>
                 </div>
               </div>
+
+              {photos.length > 0 && (
+                <div className="border-t pt-4">
+                  <p className="text-xs text-muted-foreground mb-2">Photos attached</p>
+                  <div className="flex gap-2">
+                    {photos.map((p, i) => (
+                      <div key={i} className="h-12 w-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <img src={p.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

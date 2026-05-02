@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign, MapPin } from "lucide-react";
+import { Plus, Briefcase, Star, Bookmark, Clock, CheckCircle, AlertTriangle, ChevronRight, TrendingUp, RotateCcw, ShieldAlert, DollarSign, MapPin, Gift } from "lucide-react";
+import { ReferralCard } from "@/components/referral-card";
 import { Button } from "@/components/ui/button";
 import { ReviewNudge } from "@/components/review-nudge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,7 @@ const STAT_CARDS = [
   { key: "disputed",    label: "Disputed",    icon: AlertTriangle, color: "text-red-600 bg-red-50" },
 ];
 
-type Tab = "active" | "history" | "savedJobs" | "saved" | "spending";
+type Tab = "active" | "history" | "savedJobs" | "saved" | "spending" | "refer";
 
 export default function HomeownerDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("active");
@@ -70,6 +71,7 @@ export default function HomeownerDashboard() {
     { key: "savedJobs",  label: "Saved Jobs",    count: savedJobsList.length },
     { key: "saved",      label: "Saved Pros",    count: savedContractors?.length },
     { key: "spending",   label: "Spending" },
+    { key: "refer",      label: "Refer & Earn" },
   ];
 
   return (
@@ -436,6 +438,37 @@ export default function HomeownerDashboard() {
               <p className="text-sm mt-1">Complete a job to track your spending</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Refer & Earn */}
+      {activeTab === "refer" && (
+        <div className="max-w-md">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Gift className="h-5 w-5 text-violet-600" />
+              <h2 className="text-xl font-bold">Refer &amp; Earn</h2>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              Invite friends to FundiVerify. When they post their first job, you both get a reward.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <Gift className="h-6 w-6 text-violet-600" />
+              </div>
+              <div>
+                <p className="font-bold">KES 200 for you + KES 200 for them</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Your friend gets KES 200 credit on their first job. You earn KES 200 once they post.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <ReferralCard homeownerId={HOMEOWNER_ID} variant="homeowner" />
         </div>
       )}
     </div>
